@@ -2,7 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 from typing import List, Dict, Any
-from clipper.logger import log_step, log_success, log_warning
+from .logger import log_step, log_success, log_warning
 
 def cut_clip(source_video: str, start: float, end: float, out_path: str) -> str:
     """Trims source video/audio accurately between start and end timestamps."""

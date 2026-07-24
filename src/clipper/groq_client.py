@@ -1,10 +1,10 @@
 import os
 import itertools
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 from dotenv import load_dotenv
 from groq import Groq, APIError, RateLimitError
-from clipper.logger import log_info, log_success, log_warning, log_error
+from .logger import log_info, log_success, log_warning, log_error
 
 load_dotenv()
 
@@ -59,7 +59,7 @@ class GroqModelPool:
                 log_info("GroqLLM", f"Attempting LLM request with model: \033[1m{model_name}\033[0m")
                 response = self.client.chat.completions.create(
                     model=model_name,
-                    messages=messages,
+                    messages=cast(Any, messages),
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
@@ -86,7 +86,7 @@ class GroqModelPool:
         try:
             response = self.client.chat.completions.create(
                 model=fallback_model,
-                messages=messages,
+                messages=cast(Any, messages),
                 temperature=temperature,
                 max_tokens=max_tokens,
             )

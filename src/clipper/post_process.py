@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any
-from clipper.logger import log_step, log_success, log_warning, log_info
+from .logger import log_step, log_success, log_warning, log_info
 
 _HAS_LIBASS: Optional[bool] = None
 

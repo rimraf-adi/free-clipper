@@ -2,14 +2,14 @@ import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from clipper.config import load_config
-from clipper.ingest import normalize_audio_sources
-from clipper.transcribe import transcribe
-from clipper.select_highlights import select_hierarchical_highlights
-from clipper.cut_clips import cut_clip
-from clipper.srt_utils import generate_srt_for_clip
-from clipper.post_process import add_captions
-from clipper.logger import print_header, print_stage_banner, print_summary_box, log_info, log_success, log_warning
+from .config import load_config
+from .ingest import normalize_audio_sources
+from .transcribe import transcribe
+from .select_highlights import select_hierarchical_highlights
+from .cut_clips import cut_clip
+from .srt_utils import generate_srt_for_clip
+from .post_process import add_captions
+from .logger import print_header, print_stage_banner, print_summary_box, log_info, log_success, log_warning
 
 def run_pipeline(
     input_source: str,

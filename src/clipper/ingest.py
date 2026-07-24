@@ -3,9 +3,9 @@ import csv
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, cast
 import yt_dlp
-from clipper.logger import log_info, log_success, log_step, log_warning
+from .logger import log_info, log_success, log_step, log_warning
 
 KNOWN_MEDIA_EXTENSIONS = {".mp4", ".mkv", ".webm", ".avi", ".mov", ".mp3", ".wav", ".m4a", ".flac"}
 
@@ -29,10 +29,14 @@ def sanitize_title(raw_title: str) -> str:
 def fetch_youtube_title(url: str) -> str:
     """Extracts YouTube video title using yt-dlp metadata API."""
     try:
-        ydl_opts = {"quiet": True, "no_warnings": True}
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl_opts: Dict[str, Any] = {"quiet": True, "no_warnings": True}
+        with yt_dlp.YoutubeDL(cast(Any, ydl_opts)) as ydl:
             info = ydl.extract_info(url, download=False)
-            return info.get("title", "YouTube_Video")
+            if info and isinstance(info, dict):
+                title = info.get("title")
+                if isinstance(title, str) and title:
+                    return title
+            return "YouTube_Video"
     except Exception as exc:
         log_warning("Ingest", f"Could not fetch YouTube title metadata: {exc}")
         return "YouTube_Video"
@@ -76,7 +80,7 @@ def download_media_from_url(url: str, out_dir: str = "work", index: int = 0) -> 
                     return {"path": existing_path, "title": raw_title, "sanitized_title": sanitized}
     
     out_template = f"{out_prefix}.%(ext)s"
-    ydl_opts = {
+    ydl_opts: Dict[str, Any] = {
         "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "outtmpl": out_template,
         "merge_output_format": "mp4",
@@ -84,7 +88,7 @@ def download_media_from_url(url: str, out_dir: str = "work", index: int = 0) -> 
     }
     
     log_step("Ingest", f"Downloading media #{index+1} ('\033[1m{raw_title}\033[0m') from YouTube URL: \033[36m{url}\033[0m")
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(cast(Any, ydl_opts)) as ydl:
         ydl.download([url])
     
     downloaded_video = f"{out_prefix}.mp4"

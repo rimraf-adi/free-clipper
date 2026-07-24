@@ -2,8 +2,8 @@ import json
 import re
 import time
 from typing import List, Dict, Any, Optional
-from clipper.groq_client import GroqModelPool
-from clipper.logger import log_info, log_success, log_warning, log_step
+from .groq_client import GroqModelPool
+from .logger import log_info, log_success, log_warning, log_step
 
 FALLBACK_SYSTEM_PROMPT_TEMPLATE = """You select engaging clips strictly between {min_duration} seconds and {max_duration} seconds long from a podcast transcript that will perform well as standalone videos on social media.
 

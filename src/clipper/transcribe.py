@@ -4,8 +4,8 @@ import subprocess
 import wave
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from clipper.groq_client import GroqModelPool
-from clipper.logger import log_info, log_success, log_warning, log_step, log_error
+from .groq_client import GroqModelPool
+from .logger import log_info, log_success, log_warning, log_step, log_error
 
 MAX_GROQ_FILE_SIZE_BYTES = 20 * 1024 * 1024
 CHUNK_DURATION_SEC = 600.0

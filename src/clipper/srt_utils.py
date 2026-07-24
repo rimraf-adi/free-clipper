@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Dict, Any
-from clipper.logger import log_success
+from .logger import log_success
 
 def format_timestamp(seconds: float) -> str:
     """Formats seconds to SRT timestamp format: HH:MM:SS,mmm"""
