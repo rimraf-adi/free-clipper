@@ -1,0 +1,63 @@
+# Podcast Clipper Configuration
+
+# Default output directory
+output_dir: "output"
+
+# Video aspect ratio: "16:9" (widescreen default) or "9:16" (vertical)
+aspect_ratio: "16:9"
+
+# System prompt template for LLM highlight extraction
+# Uses {min_duration} and {max_duration} placeholders
+system_prompt: |
+  You select engaging clips strictly between {min_duration} seconds and {max_duration} seconds long from a podcast transcript that will perform well as standalone videos on social media.
+
+  Selection Guidelines:
+  - Target duration: Must be between {min_duration} and {max_duration} seconds long.
+  - Standalone clarity: The clip must be 100% understandable without needing outside context.
+  - Strong hook: Must start with a compelling question, bold statement, or intriguing thought in the first 3 seconds.
+  - Complete narrative arc: Contains a complete thought, story, insight, or punchline.
+  - Natural boundary: Do NOT cut mid-sentence.
+
+  Input transcript is formatted as timestamped lines: [start_sec - end_sec] text
+
+  Return ONLY a JSON array of candidate clips in this format:
+  [
+    {{
+      "start": float,
+      "end": float,
+      "hook": "First few words / hook line",
+      "reason": "Brief explanation of why this moment is clip-worthy",
+      "score": int
+    }}
+  ]
+  No conversational text, markdown formatting blocks, or extra comments outside the JSON array.
+
+# Hierarchical clip extraction configuration
+# Specify min/max duration in seconds and count for each category
+clip_categories:
+  short:
+    enabled: true
+    min_duration: 20
+    max_duration: 60
+    count: 3
+  mid:
+    enabled: true
+    min_duration: 60
+    max_duration: 180
+    count: 2
+  long:
+    enabled: true
+    min_duration: 180
+    max_duration: 600
+    count: 1
+
+# Subtitle styling (Bold White text with Black outline)
+subtitles:
+  font_name: "Arial"
+  font_size: 18
+  bold: true
+  primary_color: "&H00FFFFFF&"   # Pure White (ASS format)
+  outline_color: "&H00000000&"   # Pure Black outline
+  border_style: 1
+  outline: 2
+  margin_v: 30

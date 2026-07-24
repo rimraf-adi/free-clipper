@@ -1,0 +1,22 @@
+[project]
+name = "clipper"
+version = "0.1.0"
+description = "Automated Podcast & Video Clipping Agent powered by Groq API and FFmpeg"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "groq>=1.5.0",
+    "python-dotenv>=1.2.2",
+    "faster-whisper>=1.2.1",
+    "ffmpeg-python>=0.2.0",
+    "yt-dlp>=2026.7.4",
+    "pydub>=0.25.1",
+    "pyyaml>=6.0.3",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

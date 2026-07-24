@@ -1,0 +1,22 @@
+# Environment and Secret keys
+.env
+*.env
+
+# Output and working data directories
+work/
+clips/
+output/
+downloads/
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.DS_Store
+
+# Virtual environments
+.venv/
+venv/
