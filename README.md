@@ -38,7 +38,7 @@ clipper/
 ├── main.py                    # CLI entry point launcher
 ├── config.yaml                # Editable configuration file
 ├── links.csv                  # Example YouTube URL list
-├── pyproject.toml             # Package definition & dependencies
+├── pyproject.toml             # Package definition & Pyright config
 ├── .env.example               # Template for API key
 ├── README.md
 └── spec.md
@@ -49,9 +49,9 @@ clipper/
 ## ⚡ Quick Start
 
 ### 1. Prerequisites
-- Python 3.10+
-- [uv](https://github.com/astral-sh/uv) (recommended) or `pip`
-- [FFmpeg](https://ffmpeg.org/) installed on your system `PATH`
+- **Python 3.10+**
+- **[uv](https://github.com/astral-sh/uv)** (recommended) or `pip`
+- **[FFmpeg](https://ffmpeg.org/)** installed on system `PATH`
 
 ### 2. Environment Setup
 
@@ -73,24 +73,48 @@ Using `uv`:
 uv sync
 ```
 
+Alternatively, install in editable mode:
+```bash
+uv pip install -e .
+```
+
 ---
 
-## 🚀 Usage
+## 🚀 CLI Commands & Usage
 
-### 1. Process YouTube URLs from a CSV file
-```bash
-uv run python main.py links.csv
-```
+### Basic Usage
 
-### 2. Process Comma-Separated Links or Local Files
-```bash
-uv run python main.py "https://www.youtube.com/watch?v=EXAMPLE1, https://www.youtube.com/watch?v=EXAMPLE2"
-```
+- **Process a Single YouTube URL**:
+  ```bash
+  uv run python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+  ```
 
-### 3. Override Aspect Ratio (e.g., 9:16 Vertical Shorts)
-```bash
-uv run python main.py links.csv --aspect-ratio 9:16
-```
+- **Process a Local Video or Audio File**:
+  ```bash
+  uv run python main.py "/path/to/local/podcast.mp4"
+  ```
+
+- **Process YouTube URLs from a CSV File**:
+  ```bash
+  uv run python main.py links.csv
+  ```
+
+- **Process Multiple Comma-Separated Links**:
+  ```bash
+  uv run python main.py "https://youtu.be/ID1, https://youtu.be/ID2"
+  ```
+
+---
+
+### Command Flags & Options
+
+| Command Flag | Description | Example |
+| :--- | :--- | :--- |
+| `input` | **(Required)** Path to video file, URL, comma-separated URLs, or CSV file | `uv run python main.py video.mp4` |
+| `--config` | Custom YAML configuration file path *(default: `config.yaml`)* | `uv run python main.py links.csv --config custom.yaml` |
+| `--aspect-ratio` | Video format ratio: `16:9` (Widescreen) or `9:16` (Vertical Shorts/Reels) | `uv run python main.py links.csv --aspect-ratio 9:16` |
+| `--clips` | Override max clip count per category | `uv run python main.py links.csv --clips 3` |
+| `--output-dir` | Custom destination directory for exported clips | `uv run python main.py links.csv --output-dir my_clips` |
 
 ---
 
@@ -155,11 +179,17 @@ output/
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Testing & Verification
 
-```bash
-uv run python -m unittest test_pipeline.py
-```
+- **Run Unit Tests**:
+  ```bash
+  uv run python test_pipeline.py
+  ```
+
+- **Run Type Checker (Pyright)**:
+  ```bash
+  npx pyright
+  ```
 
 ---
 
