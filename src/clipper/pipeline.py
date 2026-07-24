@@ -7,7 +7,7 @@ from .ingest import normalize_audio_sources
 from .transcribe import transcribe
 from .select_highlights import select_hierarchical_highlights
 from .cut_clips import cut_clip
-from .srt_utils import generate_srt_for_clip
+from .srt_utils import generate_srt_for_clip, write_clip_reason_file
 from .post_process import add_captions
 from .logger import print_header, print_stage_banner, print_summary_box, log_info, log_success, log_warning
 
@@ -88,8 +88,13 @@ def run_pipeline(
                 raw_clip_path = os.path.join(clips_work_dir, f"clip_{i+1:02d}.mp4")
                 cut_clip(source_media, clip["start"], clip["end"], raw_clip_path)
                 
-                srt_path = os.path.join(work_sub_dir, f"{cat_name}_clip_{i+1:02d}.srt")
+                # Sidecar subtitle file (.srt)
+                srt_path = os.path.join(cat_out_dir, f"clip_{i+1:02d}.srt")
                 generate_srt_for_clip(transcript, clip["start"], clip["end"], srt_path)
+                
+                # LLM reasoning explanation file (.txt)
+                reason_txt_path = os.path.join(cat_out_dir, f"clip_{i+1:02d}.txt")
+                write_clip_reason_file(clip, cat_name, reason_txt_path)
                 
                 final_out = os.path.join(cat_out_dir, f"clip_{i+1:02d}.mp4")
                 add_captions(

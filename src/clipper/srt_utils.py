@@ -63,3 +63,39 @@ def generate_srt_for_clip(
         
     log_success("SRTUtils", f"Generated subtitle file: \033[1m{out_srt_path}\033[0m ({len(srt_entries)} captions)")
     return out_srt_path
+
+def write_clip_reason_file(clip_info: Dict[str, Any], cat_name: str, out_txt_path: str) -> str:
+    """Writes a text file explaining why this clip was selected by the LLM."""
+    Path(os.path.dirname(out_txt_path)).mkdir(parents=True, exist_ok=True)
+    
+    start_sec = clip_info.get("start", 0.0)
+    end_sec = clip_info.get("end", 0.0)
+    duration = max(0.0, end_sec - start_sec)
+    hook = clip_info.get("hook", "N/A")
+    reason = clip_info.get("reason", "Selected by LLM as an engaging highlight.")
+    score = clip_info.get("score", "N/A")
+    
+    start_fmt = format_timestamp(start_sec)
+    end_fmt = format_timestamp(end_sec)
+    
+    content = (
+        "======================================================================\n"
+        "🎬 CLIP METADATA & LLM SELECTION REASONING\n"
+        "======================================================================\n\n"
+        f"Category:           {cat_name.upper()} ({start_sec:.1f}s - {end_sec:.1f}s)\n"
+        f"Timestamps:         {start_fmt} --> {end_fmt} (Duration: {duration:.1f}s)\n"
+        f"Selection Score:    {score}/10\n"
+        f"Hook / Title:       \"{hook}\"\n\n"
+        "----------------------------------------------------------------------\n"
+        "💡 WHY THIS CLIP WAS DECIDED:\n"
+        "----------------------------------------------------------------------\n"
+        f"{reason}\n"
+        "======================================================================\n"
+    )
+    
+    with open(out_txt_path, "w", encoding="utf-8") as f:
+        f.write(content)
+        
+    log_success("SRTUtils", f"Generated clip reasoning file: \033[1m{out_txt_path}\033[0m")
+    return out_txt_path
+
