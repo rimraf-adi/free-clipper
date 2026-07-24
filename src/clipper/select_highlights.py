@@ -33,6 +33,9 @@ def clean_json_response(raw_text: str) -> str:
         return "[]"
     text = raw_text.strip()
     
+    # Strip <think>...</think> tags if present (e.g., Qwen reasoning models)
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    
     # Strip markdown code fences if present
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
