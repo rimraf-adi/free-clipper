@@ -1,6 +1,8 @@
+import os
 import json
 import re
 import time
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .groq_client import GroqModelPool
 from .logger import log_info, log_success, log_warning, log_step
@@ -128,9 +130,23 @@ def select_highlights_from_chunk(
     total_chunks: int,
     min_dur: int,
     max_dur: int,
-    system_prompt_template: str = FALLBACK_SYSTEM_PROMPT_TEMPLATE
+    system_prompt_template: str = FALLBACK_SYSTEM_PROMPT_TEMPLATE,
+    window_cache_file: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Evaluates a single transcript chunk via Groq LLM for specific duration targets."""
+    """Evaluates a single transcript chunk via Groq LLM with per-window JSON caching."""
+    window_key = f"window_{chunk_idx:02d}_{chunk[0]['start']:.1f}_{chunk[-1]['end']:.1f}_{min_dur}_{max_dur}"
+    
+    # Check per-window cache if available
+    if window_cache_file and os.path.exists(window_cache_file):
+        try:
+            with open(window_cache_file, "r", encoding="utf-8") as f:
+                win_cache = json.load(f)
+            if isinstance(win_cache, dict) and window_key in win_cache:
+                log_info("SelectHighlights", f"Loaded cached LLM window #{chunk_idx+1}/{total_chunks} ({min_dur}-{max_dur}s)")
+                return win_cache[window_key]
+        except Exception:
+            pass
+
     full_text_lines = []
     for seg in chunk:
         full_text_lines.append(f"[{seg['start']:.1f}-{seg['end']:.1f}] {seg['text']}")
@@ -145,6 +161,7 @@ def select_highlights_from_chunk(
     
     log_info("SelectHighlights", f"Evaluating window #{chunk_idx+1}/{total_chunks} ({chunk[0]['start']:.1f}s - {chunk[-1]['end']:.1f}s) for {min_dur}-{max_dur}s clips...")
     
+    valid_clips = []
     try:
         res = groq_pool.chat_completion(
             messages=[{"role": "user", "content": prompt}],
@@ -161,32 +178,61 @@ def select_highlights_from_chunk(
             clips = json.loads(cleaned)
         except json.JSONDecodeError:
             log_warning("SelectHighlights", f"Could not parse JSON output from model {model_used}. Preview: {raw_content[:80]}...")
-            return []
+            clips = []
             
         if isinstance(clips, dict):
             clips = [clips]
         elif not isinstance(clips, list):
             clips = []
 
-        valid_clips = []
         for clip in clips:
             if isinstance(clip, dict) and "start" in clip and "end" in clip and clip["end"] > clip["start"]:
                 valid_clips.append(clip)
-        return valid_clips
     except Exception as exc:
         log_warning("SelectHighlights", f"Failed evaluating window #{chunk_idx+1}: {exc}")
-        return []
+
+    # Save to window cache file
+    if window_cache_file:
+        try:
+            win_cache = {}
+            if os.path.exists(window_cache_file):
+                with open(window_cache_file, "r", encoding="utf-8") as f:
+                    win_cache = json.load(f)
+            win_cache[window_key] = valid_clips
+            Path(os.path.dirname(window_cache_file)).mkdir(parents=True, exist_ok=True)
+            with open(window_cache_file, "w", encoding="utf-8") as f:
+                json.dump(win_cache, f, indent=2)
+        except Exception as exc:
+            log_warning("SelectHighlights", f"Could not save window cache: {exc}")
+
+    return valid_clips
 
 def select_hierarchical_highlights(
     transcript: List[Dict[str, Any]],
     categories_cfg: Dict[str, Any],
-    system_prompt_template: Optional[str] = None
+    system_prompt_template: Optional[str] = None,
+    out_dir: Optional[str] = None,
+    force_refresh: bool = False
 ) -> Dict[str, List[Dict[str, Any]]]:
-    """Selects hierarchical clip highlights categorized into short, mid, and long duration tiers."""
+    """Selects hierarchical clip highlights categorized into short, mid, and long duration tiers with dual-tier disk caching."""
     if not transcript:
         log_warning("SelectHighlights", "Transcript is empty. Cannot select highlights.")
         return {}
         
+    highlights_cache_file = os.path.join(out_dir, "llm_highlights.json") if out_dir else None
+    window_cache_file = os.path.join(out_dir, "llm_window_cache.json") if out_dir else None
+
+    # Tier 1: Overall Highlights Cache
+    if highlights_cache_file and os.path.exists(highlights_cache_file) and not force_refresh:
+        try:
+            with open(highlights_cache_file, "r", encoding="utf-8") as f:
+                cached_highlights = json.load(f)
+            if isinstance(cached_highlights, dict) and cached_highlights:
+                log_success("SelectHighlights", f"Loaded cached LLM highlights from \033[1m{highlights_cache_file}\033[0m")
+                return cached_highlights
+        except Exception as exc:
+            log_warning("SelectHighlights", f"Could not read LLM highlights cache {highlights_cache_file}: {exc}")
+
     groq_pool = GroqModelPool()
     chunks = chunk_transcript_by_time(transcript, window_sec=300.0, overlap_sec=30.0)
     prompt_tpl = system_prompt_template or FALLBACK_SYSTEM_PROMPT_TEMPLATE
@@ -208,17 +254,29 @@ def select_hierarchical_highlights(
             if chunk[-1]["end"] - chunk[0]["start"] < min_dur:
                 continue
             chunk_clips = select_highlights_from_chunk(
-                groq_pool, chunk, idx, len(chunks), min_dur, max_dur, system_prompt_template=prompt_tpl
+                groq_pool, chunk, idx, len(chunks), min_dur, max_dur,
+                system_prompt_template=prompt_tpl,
+                window_cache_file=window_cache_file
             )
             cat_candidates.extend(chunk_clips)
-            if idx < len(chunks) - 1:
+            if idx < len(chunks) - 1 and not window_cache_file:
                 time.sleep(1.0)
                 
         deduped = deduplicate_clips(cat_candidates, min_duration=min_dur, max_duration=max_dur)
         selected = deduped[:target_count]
         categorized_clips[cat_name] = selected
         log_success("SelectHighlights", f"Selected \033[1m{len(selected)}\033[0m {cat_name} clips ({min_dur}s-{max_dur}s).")
-        
+
+    # Save overall highlights cache
+    if highlights_cache_file:
+        try:
+            Path(os.path.dirname(highlights_cache_file)).mkdir(parents=True, exist_ok=True)
+            with open(highlights_cache_file, "w", encoding="utf-8") as f:
+                json.dump(categorized_clips, f, indent=2)
+            log_success("SelectHighlights", f"Saved LLM highlights cache to \033[1m{highlights_cache_file}\033[0m")
+        except Exception as exc:
+            log_warning("SelectHighlights", f"Could not save LLM highlights cache: {exc}")
+
     return categorized_clips
 
 def select_highlights(transcript: List[Dict[str, Any]], max_clips: int = 5) -> List[Dict[str, Any]]:

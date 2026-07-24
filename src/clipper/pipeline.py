@@ -62,7 +62,8 @@ def run_pipeline(
         categorized_highlights = select_hierarchical_highlights(
             transcript,
             cfg["clip_categories"],
-            system_prompt_template=cfg.get("system_prompt")
+            system_prompt_template=cfg.get("system_prompt"),
+            out_dir=work_sub_dir
         )
         
         total_clips_found = sum(len(v) for v in categorized_highlights.values())
