@@ -29,11 +29,34 @@ Return ONLY a JSON array of candidate clips in this format:
 No conversational text, markdown formatting blocks, or extra comments outside the JSON array."""
 
 def clean_json_response(raw_text: str) -> str:
-    raw_text = raw_text.strip()
-    match = re.search(r"\[\s*\{.*\}\s*\]", raw_text, re.DOTALL)
-    if match:
-        return match.group(0)
-    return raw_text
+    if not raw_text:
+        return "[]"
+    text = raw_text.strip()
+    
+    # Strip markdown code fences if present
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
+    text = text.strip()
+    
+    # Extract JSON array if present
+    match_arr = re.search(r"\[\s*.*?\s*\]", text, re.DOTALL)
+    if match_arr:
+        return match_arr.group(0)
+        
+    # Extract JSON object if present
+    match_obj = re.search(r"\{\s*.*?\s*\}", text, re.DOTALL)
+    if match_obj:
+        try:
+            parsed = json.loads(match_obj.group(0))
+            if isinstance(parsed, dict):
+                for val in parsed.values():
+                    if isinstance(val, list):
+                        return json.dumps(val)
+                return json.dumps([parsed])
+        except Exception:
+            pass
+            
+    return text
 
 def chunk_transcript_by_time(transcript: List[Dict[str, Any]], window_sec: float = 300.0, overlap_sec: float = 30.0) -> List[List[Dict[str, Any]]]:
     """Splits transcript into ~5-minute overlapping windows to keep token counts within Groq TPM limits."""
@@ -128,13 +151,23 @@ def select_highlights_from_chunk(
         )
         
         model_used = res["model"]
-        raw_content = res["content"]
+        raw_content = res.get("content") or ""
         cleaned = clean_json_response(raw_content)
         
-        clips = json.loads(cleaned)
+        try:
+            clips = json.loads(cleaned)
+        except json.JSONDecodeError:
+            log_warning("SelectHighlights", f"Could not parse JSON output from model {model_used}. Preview: {raw_content[:80]}...")
+            return []
+            
+        if isinstance(clips, dict):
+            clips = [clips]
+        elif not isinstance(clips, list):
+            clips = []
+
         valid_clips = []
         for clip in clips:
-            if "start" in clip and "end" in clip and clip["end"] > clip["start"]:
+            if isinstance(clip, dict) and "start" in clip and "end" in clip and clip["end"] > clip["start"]:
                 valid_clips.append(clip)
         return valid_clips
     except Exception as exc:
