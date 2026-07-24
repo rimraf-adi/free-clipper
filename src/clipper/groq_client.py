@@ -12,7 +12,6 @@ LLM_MODEL_POOL = [
     "llama-3.1-8b-instant",
     "openai/gpt-oss-120b",
     "openai/gpt-oss-20b",
-    "qwen/qwen3.6-27b",
     "llama-3.3-70b-versatile",
 ]
 
