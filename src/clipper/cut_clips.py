@@ -6,9 +6,13 @@ from .logger import log_step, log_success, log_warning
 
 def cut_clip(source_video: str, start: float, end: float, out_path: str) -> str:
     """Trims source video/audio accurately between start and end timestamps."""
+    if not os.path.exists(source_video):
+        raise FileNotFoundError(f"Source video file not found: {source_video}")
+        
     Path(os.path.dirname(out_path)).mkdir(parents=True, exist_ok=True)
     duration = max(1.0, end - start)
     
+    # Place -i before -ss for accurate stream decoding
     cmd = [
         "ffmpeg", "-y",
         "-i", source_video,
@@ -25,7 +29,7 @@ def cut_clip(source_video: str, start: float, end: float, out_path: str) -> str:
     try:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
-        log_warning("CutClips", f"Exact seek failed for {out_path}. Falling back to copy stream seek...")
+        log_warning("CutClips", f"Exact seek failed for {out_path}. Falling back to fast copy seek...")
         fallback_cmd = [
             "ffmpeg", "-y",
             "-ss", str(start),
