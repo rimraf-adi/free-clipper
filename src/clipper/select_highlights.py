@@ -7,7 +7,10 @@ from typing import List, Dict, Any, Optional
 from .groq_client import GroqModelPool
 from .logger import log_info, log_success, log_warning, log_step
 
-FALLBACK_SYSTEM_PROMPT_TEMPLATE = """You select engaging clips strictly between {min_duration} seconds and {max_duration} seconds long from a podcast transcript that will perform well as standalone videos on social media.
+# ──────────────────────────────────────────────────────────────────────
+# PASS 1: Window-Level Discovery Prompt
+# ──────────────────────────────────────────────────────────────────────
+DISCOVERY_PROMPT_TEMPLATE = """You select engaging clips strictly between {min_duration} seconds and {max_duration} seconds long from a podcast transcript that will perform well as standalone videos on social media.
 
 Selection Guidelines:
 - Mandatory Complete Event: The clip MUST be a 100% complete story, discussion, or event. It MUST start at the beginning of a complete sentence and end at the full conclusion of the thought or story. NEVER select incomplete events or mid-sentence cutoffs.
@@ -29,6 +32,34 @@ Return ONLY a JSON array of candidate clips in this format:
   }}
 ]
 No conversational text, markdown formatting blocks, or extra comments outside the JSON array."""
+
+# ──────────────────────────────────────────────────────────────────────
+# PASS 2: Clip Validation & Boundary Refinement Prompt
+# ──────────────────────────────────────────────────────────────────────
+VALIDATION_PROMPT_TEMPLATE = """You are a clip quality validator. Given a transcript excerpt that was selected as a social media clip candidate, your job is to:
+
+1. VERIFY the clip is a COMPLETE, self-contained event (story, insight, joke, or discussion). It must NOT start mid-sentence or end mid-thought.
+2. REFINE the start and end timestamps so the clip begins at the very first word of the opening sentence and ends at the very last word of the concluding sentence (with punctuation like . ? !).
+3. RATE the clip quality on a scale of 1-10 for social media virality.
+
+If the clip is incomplete or cuts off mid-event, you MUST fix it by expanding the boundaries to include the full event, OR reject it entirely by returning an empty array.
+
+Input transcript excerpt with timestamps: [start_sec - end_sec] text
+
+Return ONLY a JSON array with exactly 0 or 1 validated clip:
+[
+  {{
+    "start": float,
+    "end": float,
+    "hook": "Opening hook line of the clip",
+    "reason": "Why this clip works as a standalone viral moment",
+    "is_complete": true,
+    "score": int
+  }}
+]
+Return an empty array [] if the clip is unfixably incomplete or low quality (score < 5).
+No conversational text, markdown formatting blocks, or extra comments outside the JSON array."""
+
 
 def snap_clip_to_sentences(
     transcript: List[Dict[str, Any]],
@@ -128,6 +159,21 @@ def chunk_transcript_by_time(transcript: List[Dict[str, Any]], window_sec: float
         
     return chunks
 
+def extract_transcript_excerpt(
+    transcript: List[Dict[str, Any]],
+    start_sec: float,
+    end_sec: float,
+    context_before: float = 10.0,
+    context_after: float = 10.0
+) -> List[Dict[str, Any]]:
+    """Extracts transcript segments for a clip region with optional context padding for validation."""
+    padded_start = max(0.0, start_sec - context_before)
+    padded_end = end_sec + context_after
+    return [
+        seg for seg in transcript
+        if padded_start <= seg.get("start", 0.0) <= padded_end
+    ]
+
 def deduplicate_clips(clips: List[Dict[str, Any]], min_duration: float = 0.0, max_duration: float = 9999.0) -> List[Dict[str, Any]]:
     """Deduplicates overlapping candidate clips and filters strictly by min/max duration bounds."""
     if not clips:
@@ -164,6 +210,9 @@ def deduplicate_clips(clips: List[Dict[str, Any]], min_duration: float = 0.0, ma
             
     return sorted(deduped, key=lambda c: c.get("score", 5), reverse=True)
 
+# ──────────────────────────────────────────────────────────────────────
+# PASS 1: Discovery — Find candidate clips from each window
+# ──────────────────────────────────────────────────────────────────────
 def select_highlights_from_chunk(
     groq_pool: GroqModelPool,
     chunk: List[Dict[str, Any]],
@@ -171,10 +220,10 @@ def select_highlights_from_chunk(
     total_chunks: int,
     min_dur: int,
     max_dur: int,
-    system_prompt_template: str = FALLBACK_SYSTEM_PROMPT_TEMPLATE,
+    system_prompt_template: str = DISCOVERY_PROMPT_TEMPLATE,
     window_cache_file: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Evaluates a single transcript chunk via Groq LLM with per-window JSON caching."""
+    """PASS 1: Evaluates a single transcript chunk via Groq LLM with per-window JSON caching."""
     window_key = f"window_{chunk_idx:02d}_{chunk[0]['start']:.1f}_{chunk[-1]['end']:.1f}_{min_dur}_{max_dur}"
     
     # Check per-window cache if available
@@ -196,7 +245,7 @@ def select_highlights_from_chunk(
     try:
         system_prompt = system_prompt_template.format(min_duration=min_dur, max_duration=max_dur)
     except Exception:
-        system_prompt = FALLBACK_SYSTEM_PROMPT_TEMPLATE.format(min_duration=min_dur, max_duration=max_dur)
+        system_prompt = DISCOVERY_PROMPT_TEMPLATE.format(min_duration=min_dur, max_duration=max_dur)
         
     prompt = f"Transcript Window ({chunk[0]['start']:.1f}s - {chunk[-1]['end']:.1f}s):\n{full_transcript}\n\nSelect up to 3 candidate clips ({min_dur}-{max_dur}s duration). Return ONLY the JSON array."
     
@@ -251,6 +300,121 @@ def select_highlights_from_chunk(
 
     return valid_clips
 
+# ──────────────────────────────────────────────────────────────────────
+# PASS 2: Validation — LLM verifies each clip is a complete event
+# ──────────────────────────────────────────────────────────────────────
+def validate_clip_completeness(
+    groq_pool: GroqModelPool,
+    transcript: List[Dict[str, Any]],
+    clip: Dict[str, Any],
+    clip_idx: int,
+    total_clips: int,
+    min_dur: int,
+    max_dur: int,
+    validation_cache_file: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """PASS 2: Uses a second LLM call to validate and refine each candidate clip for event completeness."""
+    cache_key = f"validate_{clip['start']:.1f}_{clip['end']:.1f}_{min_dur}_{max_dur}"
+
+    # Check validation cache
+    if validation_cache_file and os.path.exists(validation_cache_file):
+        try:
+            with open(validation_cache_file, "r", encoding="utf-8") as f:
+                val_cache = json.load(f)
+            if isinstance(val_cache, dict) and cache_key in val_cache:
+                cached = val_cache[cache_key]
+                if cached is None:
+                    log_info("ClipValidator", f"Clip #{clip_idx+1} rejected (cached)")
+                    return None
+                log_info("ClipValidator", f"Clip #{clip_idx+1} validated (cached)")
+                return cached
+        except Exception:
+            pass
+
+    # Extract transcript excerpt with ±10s context for the LLM to see full picture
+    excerpt = extract_transcript_excerpt(transcript, clip["start"], clip["end"], context_before=10.0, context_after=10.0)
+    if not excerpt:
+        return clip  # Can't validate without context, pass through
+
+    excerpt_lines = []
+    for seg in excerpt:
+        marker = ""
+        seg_start = seg.get("start", 0.0)
+        seg_end = seg.get("end", 0.0)
+        if seg_start >= clip["start"] and seg_end <= clip["end"]:
+            marker = " ◀ SELECTED"
+        excerpt_lines.append(f"[{seg_start:.1f}-{seg_end:.1f}] {seg.get('text', '')}{marker}")
+
+    excerpt_text = "\n".join(excerpt_lines)
+    
+    prompt = (
+        f"Candidate Clip #{clip_idx+1}/{total_clips}:\n"
+        f"  Current boundaries: {clip['start']:.1f}s - {clip['end']:.1f}s ({clip['end'] - clip['start']:.1f}s duration)\n"
+        f"  Hook: \"{clip.get('hook', 'N/A')}\"\n"
+        f"  Original reason: \"{clip.get('reason', 'N/A')}\"\n\n"
+        f"Transcript excerpt (lines marked ◀ SELECTED are currently in the clip):\n{excerpt_text}\n\n"
+        f"Validate this clip is a COMPLETE event ({min_dur}-{max_dur}s). "
+        f"Fix boundaries if needed or return [] to reject. Return ONLY the JSON array."
+    )
+
+    log_step("ClipValidator", f"Validating clip #{clip_idx+1}/{total_clips} ({clip['start']:.1f}s - {clip['end']:.1f}s) for event completeness...")
+
+    validated_clip = None
+    try:
+        res = groq_pool.chat_completion(
+            messages=[{"role": "user", "content": prompt}],
+            system_prompt=VALIDATION_PROMPT_TEMPLATE,
+            temperature=0.1,
+            max_tokens=800
+        )
+        
+        raw_content = res.get("content") or ""
+        cleaned = clean_json_response(raw_content)
+        
+        try:
+            results = json.loads(cleaned)
+        except json.JSONDecodeError:
+            log_warning("ClipValidator", f"Could not parse validation response. Passing clip through unvalidated.")
+            validated_clip = clip
+        else:
+            if isinstance(results, dict):
+                results = [results]
+            if isinstance(results, list) and len(results) > 0:
+                r = results[0]
+                if isinstance(r, dict) and "start" in r and "end" in r:
+                    # Merge validated fields into clip
+                    validated_clip = {**clip, **r}
+                    dur = validated_clip["end"] - validated_clip["start"]
+                    
+                    if dur < min_dur or dur > max_dur * 1.2:
+                        log_warning("ClipValidator", f"Clip #{clip_idx+1} refined to {dur:.1f}s (outside {min_dur}-{max_dur}s). Rejecting.")
+                        validated_clip = None
+                    else:
+                        log_success("ClipValidator", f"✔ Clip #{clip_idx+1} VALIDATED as complete event ({validated_clip['start']:.1f}s - {validated_clip['end']:.1f}s, score={validated_clip.get('score', '?')})")
+            else:
+                log_warning("ClipValidator", f"✘ Clip #{clip_idx+1} REJECTED by LLM as incomplete event.")
+                validated_clip = None
+    except Exception as exc:
+        log_warning("ClipValidator", f"Validation failed for clip #{clip_idx+1}: {exc}. Passing through unvalidated.")
+        validated_clip = clip
+
+    # Save to validation cache
+    if validation_cache_file:
+        try:
+            val_cache = {}
+            if os.path.exists(validation_cache_file):
+                with open(validation_cache_file, "r", encoding="utf-8") as f:
+                    val_cache = json.load(f)
+            val_cache[cache_key] = validated_clip
+            Path(os.path.dirname(validation_cache_file)).mkdir(parents=True, exist_ok=True)
+            with open(validation_cache_file, "w", encoding="utf-8") as f:
+                json.dump(val_cache, f, indent=2)
+        except Exception as exc:
+            log_warning("ClipValidator", f"Could not save validation cache: {exc}")
+
+    return validated_clip
+
+
 def select_hierarchical_highlights(
     transcript: List[Dict[str, Any]],
     categories_cfg: Dict[str, Any],
@@ -258,13 +422,19 @@ def select_hierarchical_highlights(
     out_dir: Optional[str] = None,
     force_refresh: bool = False
 ) -> Dict[str, List[Dict[str, Any]]]:
-    """Selects hierarchical clip highlights categorized into short, mid, and long duration tiers with dual-tier disk caching."""
+    """Selects hierarchical clip highlights using 2-pass LLM extraction:
+    
+    PASS 1 (Discovery): Scans transcript windows to find candidate clips.
+    PASS 2 (Validation): Each candidate is verified by a second LLM call for event completeness,
+                          rejecting incomplete clips and refining boundaries.
+    """
     if not transcript:
         log_warning("SelectHighlights", "Transcript is empty. Cannot select highlights.")
         return {}
         
     highlights_cache_file = os.path.join(out_dir, "llm_highlights.json") if out_dir else None
     window_cache_file = os.path.join(out_dir, "llm_window_cache.json") if out_dir else None
+    validation_cache_file = os.path.join(out_dir, "llm_validation_cache.json") if out_dir else None
 
     # Tier 1: Overall Highlights Cache
     if highlights_cache_file and os.path.exists(highlights_cache_file) and not force_refresh:
@@ -279,7 +449,7 @@ def select_hierarchical_highlights(
 
     groq_pool = GroqModelPool()
     chunks = chunk_transcript_by_time(transcript, window_sec=300.0, overlap_sec=30.0)
-    prompt_tpl = system_prompt_template or FALLBACK_SYSTEM_PROMPT_TEMPLATE
+    prompt_tpl = system_prompt_template or DISCOVERY_PROMPT_TEMPLATE
     
     categorized_clips: Dict[str, List[Dict[str, Any]]] = {}
     
@@ -291,8 +461,9 @@ def select_hierarchical_highlights(
         max_dur = cat_spec.get("max_duration", 60)
         target_count = cat_spec.get("count", 3)
         
-        log_info("SelectHighlights", f"--- Extracting \033[1m{cat_name.upper()}\033[0m clips ({min_dur}s - {max_dur}s, target count: {target_count}) ---")
+        log_info("SelectHighlights", f"━━━ PASS 1: Discovery — \033[1m{cat_name.upper()}\033[0m clips ({min_dur}s - {max_dur}s, target: {target_count}) ━━━")
         
+        # ── PASS 1: Discovery ──
         cat_candidates = []
         for idx, chunk in enumerate(chunks):
             if chunk[-1]["end"] - chunk[0]["start"] < min_dur:
@@ -307,9 +478,28 @@ def select_hierarchical_highlights(
                 time.sleep(1.0)
                 
         deduped = deduplicate_clips(cat_candidates, min_duration=min_dur, max_duration=max_dur)
-        selected = deduped[:target_count]
+        
+        # Take more candidates than target for validation pass to filter down
+        candidates_for_validation = deduped[:target_count * 2]
+        
+        log_info("SelectHighlights", f"━━━ PASS 2: Validation — Verifying \033[1m{len(candidates_for_validation)}\033[0m {cat_name} candidate(s) for complete events ━━━")
+        
+        # ── PASS 2: Validation ──
+        validated = []
+        for v_idx, candidate in enumerate(candidates_for_validation):
+            result = validate_clip_completeness(
+                groq_pool, transcript, candidate, v_idx, len(candidates_for_validation),
+                min_dur, max_dur,
+                validation_cache_file=validation_cache_file
+            )
+            if result is not None:
+                validated.append(result)
+                
+        # Re-deduplicate after validation may have shifted boundaries
+        validated = deduplicate_clips(validated, min_duration=min_dur, max_duration=max_dur)
+        selected = validated[:target_count]
         categorized_clips[cat_name] = selected
-        log_success("SelectHighlights", f"Selected \033[1m{len(selected)}\033[0m {cat_name} clips ({min_dur}s-{max_dur}s).")
+        log_success("SelectHighlights", f"Selected \033[1m{len(selected)}\033[0m validated {cat_name} clips ({min_dur}s-{max_dur}s).")
 
     # Save overall highlights cache
     if highlights_cache_file:
