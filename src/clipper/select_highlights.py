@@ -10,11 +10,11 @@ from .logger import log_info, log_success, log_warning, log_step
 FALLBACK_SYSTEM_PROMPT_TEMPLATE = """You select engaging clips strictly between {min_duration} seconds and {max_duration} seconds long from a podcast transcript that will perform well as standalone videos on social media.
 
 Selection Guidelines:
+- Mandatory Complete Event: The clip MUST be a 100% complete story, discussion, or event. It MUST start at the beginning of a complete sentence and end at the full conclusion of the thought or story. NEVER select incomplete events or mid-sentence cutoffs.
 - Target duration: Must be between {min_duration} and {max_duration} seconds long.
 - Standalone clarity: The clip must be 100% understandable without needing outside context.
 - Strong hook: Must start with a compelling question, bold statement, or intriguing thought in the first 3 seconds.
 - Complete narrative arc: Contains a complete thought, story, insight, or punchline.
-- Natural boundary: Do NOT cut mid-sentence.
 
 Input transcript is formatted as timestamped lines: [start_sec - end_sec] text
 
@@ -29,6 +29,47 @@ Return ONLY a JSON array of candidate clips in this format:
   }}
 ]
 No conversational text, markdown formatting blocks, or extra comments outside the JSON array."""
+
+def snap_clip_to_sentences(
+    transcript: List[Dict[str, Any]],
+    start_sec: float,
+    end_sec: float,
+    min_dur: float = 15.0,
+    max_dur: float = 600.0
+) -> Dict[str, float]:
+    """Snaps candidate timestamps to complete sentence start and end boundaries in the transcript."""
+    if not transcript:
+        return {"start": start_sec, "end": end_sec}
+        
+    start_idx = 0
+    for i, seg in enumerate(transcript):
+        if seg.get("start", 0.0) <= start_sec <= seg.get("end", 0.0):
+            start_idx = i
+            break
+        elif seg.get("start", 0.0) > start_sec:
+            start_idx = max(0, i - 1)
+            break
+            
+    end_idx = start_idx
+    for i in range(start_idx, len(transcript)):
+        if transcript[i].get("end", 0.0) >= end_sec:
+            end_idx = i
+            break
+            
+    # Expand to complete sentence punctuation (. ? !)
+    for i in range(end_idx, min(len(transcript), end_idx + 5)):
+        txt = transcript[i].get("text", "").strip()
+        if txt and txt[-1] in {".", "?", "!"}:
+            end_idx = i
+            break
+
+    snapped_start = round(float(transcript[start_idx].get("start", start_sec)), 2)
+    snapped_end = round(float(transcript[end_idx].get("end", end_sec)), 2)
+    
+    if snapped_end - snapped_start < min_dur and end_idx + 1 < len(transcript):
+        snapped_end = round(float(transcript[end_idx + 1].get("end", snapped_end)), 2)
+        
+    return {"start": snapped_start, "end": snapped_end}
 
 def clean_json_response(raw_text: str) -> str:
     if not raw_text:
@@ -187,6 +228,9 @@ def select_highlights_from_chunk(
 
         for clip in clips:
             if isinstance(clip, dict) and "start" in clip and "end" in clip and clip["end"] > clip["start"]:
+                snapped = snap_clip_to_sentences(chunk, clip["start"], clip["end"], min_dur, max_dur)
+                clip["start"] = snapped["start"]
+                clip["end"] = snapped["end"]
                 valid_clips.append(clip)
     except Exception as exc:
         log_warning("SelectHighlights", f"Failed evaluating window #{chunk_idx+1}: {exc}")

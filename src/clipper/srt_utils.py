@@ -19,7 +19,7 @@ def generate_srt_for_clip(
     clip_start: float,
     clip_end: float,
     out_srt_path: str,
-    max_words_per_caption: int = 4
+    max_words_per_caption: int = 6
 ) -> str:
     """Extracts words for clip time range and generates relative SRT subtitle file."""
     Path(os.path.dirname(out_srt_path)).mkdir(parents=True, exist_ok=True)
