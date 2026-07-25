@@ -114,25 +114,37 @@ def _clean_ydl_error(raw: str) -> str:
 def download_video(
     url: str, progress_hook: Optional[Callable[[dict], None]] = None
 ) -> Path:
-    """Download `url` to downloads/<uuid>.mp4 and return the file path.
-
-    Args:
-        url: source video URL.
-        progress_hook: optional yt-dlp progress callback (receives the raw
-            progress dict with ``status``/``downloaded_bytes``/``total_bytes``)
-            so callers can surface live download progress.
-
-    Raises:
-        InvalidVideoURLError: on any download failure, with a readable message.
-    """
+    """Download `url` to downloads/<url_hash>.mp4 and return the file path (cached)."""
     if not url or not url.strip():
         raise InvalidVideoURLError("No video URL was provided.")
 
-    clip_uuid = uuid.uuid4().hex
-    # yt-dlp fills in the real extension; we force a merge to mp4 below so the
-    # final file is downloads/<uuid>.mp4.
-    out_template = str(DOWNLOADS_DIR / f"{clip_uuid}.%(ext)s")
-    expected_path = DOWNLOADS_DIR / f"{clip_uuid}.mp4"
+    url_clean = url.strip()
+    url_hash = hashlib.sha256(url_clean.encode("utf-8")).hexdigest()[:16]
+    expected_path = DOWNLOADS_DIR / f"{url_hash}.mp4"
+
+    # CACHE CHECK: If video already downloaded, reuse it immediately!
+    if expected_path.exists() and expected_path.stat().st_size > 1024:
+        logger.info("Reusing cached video download for %s: %s", url_clean, expected_path)
+        if progress_hook:
+            progress_hook({
+                "status": "finished",
+                "total_bytes": expected_path.stat().st_size,
+                "downloaded_bytes": expected_path.stat().st_size
+            })
+        return expected_path
+
+    existing = sorted(DOWNLOADS_DIR.glob(f"{url_hash}.*"))
+    if existing and existing[0].stat().st_size > 1024:
+        logger.info("Reusing cached video download for %s: %s", url_clean, existing[0])
+        if progress_hook:
+            progress_hook({
+                "status": "finished",
+                "total_bytes": existing[0].stat().st_size,
+                "downloaded_bytes": existing[0].stat().st_size
+            })
+        return existing[0]
+
+    out_template = str(DOWNLOADS_DIR / f"{url_hash}.%(ext)s")
 
     base_opts = {
         # Prefer the best stream up to 1080p (plenty for shorts, avoids slow 4K
@@ -191,9 +203,9 @@ def download_video(
     if expected_path.exists():
         return expected_path
 
-    # Some sources may not produce exactly <uuid>.mp4 (e.g. a different
-    # container survived the merge). Fall back to any file with our uuid prefix.
-    candidates = sorted(DOWNLOADS_DIR.glob(f"{clip_uuid}.*"))
+    # Some sources may not produce exactly <url_hash>.mp4 (e.g. a different
+    # container survived the merge). Fall back to any file with our url_hash prefix.
+    candidates = sorted(DOWNLOADS_DIR.glob(f"{url_hash}.*"))
     if candidates:
         return candidates[0]
 
