@@ -1,7 +1,7 @@
 [project]
 name = "clipper"
-version = "0.1.0"
-description = "Automated Podcast & Video Clipping Agent powered by Groq API and FFmpeg"
+version = "0.2.0"
+description = "Automated Video Clipping Agent — CLI + Web UI — powered by Groq LLM, local Whisper, and FFmpeg"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -13,6 +13,12 @@ dependencies = [
     "pydub>=0.25.1",
     "pyyaml>=6.0.3",
     "pillow>=10.0.0",
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "pydantic>=2",
+    "requests",
+    "indic-transliteration",
 ]
 
 [build-system]
@@ -26,4 +32,3 @@ where = ["src"]
 extraPaths = ["src"]
 venvPath = "."
 venv = ".venv"
-

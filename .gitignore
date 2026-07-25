@@ -7,6 +7,7 @@ work/
 clips/
 output/
 downloads/
+transcripts/
 
 # Python-generated files
 __pycache__/
@@ -20,3 +21,13 @@ wheels/
 # Virtual environments
 .venv/
 venv/
+
+# Auto-fetched assets (fonts, masks are generated/downloaded at runtime)
+assets/fonts/
+assets/masks/
+
+# Node modules (web dashboard)
+node_modules/
+
+# Cloning artifacts
+clipping-tool/

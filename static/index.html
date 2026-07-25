@@ -1,0 +1,3435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ClipForge — Local AI Shorts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f4fb;
+    --bg-2: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f3f3f9;
+    --surface-3: #e9e9f3;
+    --line: rgba(24,22,48,.09);
+    --line-2: rgba(24,22,48,.16);
+    --text: #16141f;
+    --muted: #5a5868;
+    --muted-2: #8b8a99;
+    --accent: #6c4cff;
+    --accent-hi: #5a32f0;
+    --accent-soft: rgba(108,76,255,.12);
+    --ok: #16a34a;
+    --warn: #b07d12;
+    --danger: #e23b53;
+    --danger-soft: rgba(226,59,83,.10);
+    --radius: 18px;
+    --radius-sm: 12px;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, monospace;
+    --ease: cubic-bezier(.16,1,.3,1);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(820px 460px at 82% -6%, rgba(108,76,255,.12), transparent 60%),
+      radial-gradient(900px 520px at 8% 2%, rgba(108,76,255,.07), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Fine grain overlay for a premium, non-flat surface (fixed → no repaint cost). */
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 999; pointer-events: none; opacity: .018;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  svg { display: block; }
+  ::selection { background: var(--accent-soft); }
+
+  .main { flex: 1; min-width: 0; display: flex; justify-content: center; padding: 56px 20px 110px; }
+  .wrap { width: 100%; max-width: 760px; animation: rise .5s var(--ease) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* ---- Hero ---- */
+  .hero { margin-bottom: 30px; }
+  .brandbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+  .logo { display: inline-flex; align-items: center; gap: 11px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+  .logo .mark {
+    width: 36px; height: 36px; border-radius: 11px; color: #fff;
+    background: linear-gradient(150deg, #8b6dff, var(--accent));
+    display: grid; place-items: center;
+    box-shadow: 0 6px 18px -6px rgba(108,76,255,.6), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .logo .mark svg { width: 19px; height: 19px; }
+  .hero h1 {
+    font-size: clamp(30px, 4.6vw, 44px); margin: 0 0 12px; line-height: 1.04;
+    font-weight: 700; letter-spacing: -0.035em; max-width: 18ch;
+  }
+  .hero h1 .em { color: var(--accent-hi); }
+  .hero p { color: var(--muted); margin: 0; font-size: 15.5px; line-height: 1.55; max-width: 56ch; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 12px; font-size: 12px; font-weight: 500; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.02);
+  }
+  .badge b { color: var(--text); font-weight: 600; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+  /* ---- Top nav ---- */
+  .topnav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 2px 0; margin-bottom: 34px; }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-badge { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+  .nav-badge b { color: var(--text); font-weight: 600; }
+  .nav-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); animation: breathe 2.4s ease-in-out infinite; }
+  .nav-history {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: #fff;
+    background: linear-gradient(180deg, #2c2c38, #131320); border: 0; border-radius: 12px;
+    box-shadow: 0 10px 24px -12px rgba(20,18,40,.55); transition: filter .15s, transform .08s;
+  }
+  .nav-history svg { width: 16px; height: 16px; }
+  .nav-history:hover { filter: brightness(1.12); }
+  .nav-history:active { transform: scale(.97); }
+  @media (max-width: 560px) { .nav-badge { display: none; } }
+
+  /* ---- Landing hero ---- */
+  .landing { text-align: center; max-width: 720px; margin: 18px auto 0; }
+  .trust {
+    display: inline-flex; align-items: center; gap: 10px; padding: 6px 16px 6px 8px; margin: 0 auto 30px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+    font-size: 12.5px; font-weight: 500; color: var(--muted); box-shadow: 0 8px 22px -14px rgba(40,30,90,.3);
+  }
+  .trust-faces { display: inline-flex; }
+  .trust-faces i { width: 21px; height: 21px; border-radius: 50%; border: 2px solid var(--surface); margin-left: -8px; }
+  .trust-faces i:first-child { margin-left: 0; }
+  .trust-faces i:nth-child(1){ background: linear-gradient(135deg,#8b6dff,#6c4cff); }
+  .trust-faces i:nth-child(2){ background: linear-gradient(135deg,#ff9a62,#ff5d8f); }
+  .trust-faces i:nth-child(3){ background: linear-gradient(135deg,#5ec8ff,#6c4cff); }
+  .trust-faces i:nth-child(4){ background: linear-gradient(135deg,#3ddc97,#2bb0ff); }
+  .hero-title {
+    font-size: clamp(40px, 7.2vw, 74px); line-height: 1.05; font-weight: 800; letter-spacing: -0.035em;
+    margin: 0 0 20px; color: var(--text);
+  }
+  .hero-title .grad {
+    background: linear-gradient(92deg, var(--accent-hi), #9a7bff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero-sub { font-size: clamp(15px, 2.2vw, 18px); color: var(--muted); margin: 0 auto 32px; max-width: 50ch; line-height: 1.55; }
+
+  /* ---- Mega input bar (paste link / drop file + Generate) ---- */
+  .megabar {
+    display: flex; align-items: center; gap: 8px; padding: 8px; max-width: 580px; margin: 0 auto;
+    background: var(--surface); border: 1px solid var(--line-2); border-radius: 18px;
+    box-shadow: 0 28px 56px -28px rgba(40,30,90,.4), inset 0 1px 0 rgba(255,255,255,.7);
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .megabar:focus-within { border-color: var(--accent); box-shadow: 0 28px 56px -22px rgba(108,76,255,.38); }
+  .megabar.dragover { border-color: var(--accent); background: var(--accent-soft); }
+  .mega-up {
+    width: 46px; height: 46px; flex: none; border-radius: 12px; cursor: pointer; display: grid; place-items: center;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--accent-hi); transition: .12s;
+  }
+  .mega-up svg { width: 20px; height: 20px; }
+  .mega-up:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .megabar input.mega-input, .megabar input.mega-input:focus {
+    flex: 1; min-width: 0; border: 0; background: transparent; outline: none; box-shadow: none;
+    font: inherit; font-size: 15px; color: var(--text); padding: 0 8px; margin: 0;
+  }
+  .megabar input.mega-input::placeholder { color: var(--muted-2); }
+  .megabar input.mega-input[readonly] { color: var(--accent-hi); font-weight: 600; }
+  .megabar .mega-go { width: auto; margin: 0; padding: 13px 22px; border-radius: 12px; font-size: 14.5px; flex: none; }
+  .mega-foot { font-size: 13px; color: var(--muted-2); margin-top: 16px; }
+
+  /* ---- Credits ("as seen on" replacement) ---- */
+  .credits { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 52px; }
+  .credits-label { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-2); width: 100%; }
+  .credit { font-family: var(--mono); font-size: 14.5px; font-weight: 600; color: var(--muted); opacity: .85; }
+
+  /* ---- Card ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 28px;
+    box-shadow: 0 1px 0 0 rgba(255,255,255,.6) inset, 0 30px 60px -34px rgba(40,30,90,.28);
+  }
+  .fieldlabel { display: block; font-size: 11px; font-weight: 600; color: var(--muted-2);
+    margin: 22px 0 10px; text-transform: uppercase; letter-spacing: .09em; }
+  .fieldlabel:first-child { margin-top: 0; }
+
+  /* ---- Two-step wizard ---- */
+  .wstep { animation: wfade .26s var(--ease); }
+  @keyframes wfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .wstep-head { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .wstep-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-hi); }
+  .wstep-title { display: block; font-size: 18px; font-weight: 700; letter-spacing: -.02em; margin-top: 3px; }
+  .wback {
+    display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 11px; transition: .12s;
+  }
+  .wback svg { width: 16px; height: 16px; }
+  .wback:hover { border-color: var(--line-2); }
+  #toStep2:disabled { cursor: not-allowed; }
+
+  .config-grid { display: grid; grid-template-columns: 1fr 240px; gap: 30px; align-items: start; }
+  .cfg-left { min-width: 0; }
+  .cfg-right { position: sticky; top: 20px; }
+  .cfg-right .phone { width: 100%; max-width: 240px; margin: 0 auto; }
+  @media (max-width: 760px) {
+    .config-grid { grid-template-columns: 1fr; }
+    .cfg-right { position: static; order: -1; margin-bottom: 6px; }
+  }
+
+  .input-wrap { position: relative; }
+  .input-wrap .ic { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted-2); display: grid; }
+  .input-wrap .ic svg { width: 17px; height: 17px; }
+  input[type=text], input.barinput {
+    width: 100%; padding: 14px 16px; font-size: 15px; font-family: inherit;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    color: var(--text); outline: none; transition: border-color .18s, box-shadow .18s;
+  }
+  input::placeholder { color: var(--muted-2); }
+  .input-wrap input { padding-left: 44px; }
+  input[type=text]:focus, input.barinput:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 18px; }
+  @media (max-width: 620px) { .controls { grid-template-columns: 1fr; } }
+  .control { min-width: 0; }
+  .toggle { display: flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px; gap: 4px; }
+  .toggle button {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 10px 8px; background: transparent; color: var(--muted);
+    border: 0; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit;
+    border-radius: 9px; transition: color .15s, background .15s, transform .08s;
+  }
+  .toggle button svg { width: 15px; height: 15px; }
+  .toggle button:hover:not(:disabled) { color: var(--text); }
+  .toggle button:active:not(:disabled) { transform: scale(.97); }
+  .toggle button.active {
+    background: var(--surface-3); color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .toggle button.active svg { color: var(--accent-hi); }
+  .toggle button:disabled { opacity: .35; cursor: not-allowed; }
+
+  .counter { display: flex; align-items: center; gap: 8px; }
+  .counter button {
+    width: 44px; height: 46px; font-size: 20px; border-radius: var(--radius-sm); line-height: 1;
+    background: var(--bg-2); color: var(--text); border: 1px solid var(--line); cursor: pointer; transition: .12s;
+  }
+  .counter button:hover { border-color: var(--line-2); color: var(--accent-hi); }
+  .counter button:active { transform: scale(.95); }
+  .counter input {
+    width: 100%; text-align: center; padding: 12px; font-size: 16px; font-family: var(--mono); font-weight: 600;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); outline: none;
+  }
+  .counter input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; }
+  .chip {
+    padding: 9px 15px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600;
+    background: var(--bg-2); border: 1px solid var(--line); color: var(--muted); transition: .15s;
+  }
+  .chip:hover { color: var(--text); border-color: var(--line-2); }
+  .chip:active { transform: scale(.97); }
+  .chip.active { border-color: var(--accent); color: var(--accent-hi); background: var(--accent-soft); }
+
+  /* ---- Live phone preview ---- */
+  .preview-wrap { margin-top: 14px; display: flex; justify-content: center; }
+  /* iPhone 17 Pro Max — titanium rail, thin uniform bezels, Dynamic Island. */
+  .phone {
+    width: 232px; position: relative; padding: 6px;
+    border-radius: 50px;
+    background:
+      linear-gradient(145deg, #5b5b62 0%, #2a2a30 18%, #16161a 48%, #2f2f36 82%, #555 100%);
+    box-shadow:
+      0 44px 90px -30px rgba(0,0,0,.92),
+      0 0 0 1px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(255,255,255,.06);
+    transition: width .25s var(--ease);
+  }
+  /* Inner black rim between the titanium rail and the screen. */
+  .phone::before {
+    content: ""; position: absolute; inset: 3px; border-radius: 47px; background: #050506; z-index: 0;
+  }
+  /* Device screen: true iPhone 17 Pro Max 19.5:9. The clip fits inside (contain),
+     so a 9:16 short shows with realistic thin top/bottom bands — like fullscreen
+     playback on the real phone. The screen never morphs with the output aspect. */
+  .phone-screen {
+    position: relative; z-index: 1; width: 100%; aspect-ratio: 9 / 19.5; border-radius: 44px;
+    overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000;
+  }
+  /* Dynamic Island (portrait only). */
+  .phone-screen .island {
+    position: absolute; top: 2.4%; left: 50%; transform: translateX(-50%); z-index: 6;
+    width: 30%; height: 3.5%; min-height: 9px; background: #000; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+  }
+  .phone-screen .island::after {
+    content: ""; position: absolute; right: 12%; top: 50%; transform: translateY(-50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #2b3b55, #060608 70%);
+  }
+  /* Dynamic Island shows in every mode — it's part of the phone. */
+  .phone-screen.empty {
+    background:
+      radial-gradient(120% 80% at 50% 0%, #1b1b22, #0b0b0e);
+  }
+  /* Clip region inside the 19.5:9 screen, sized to the OUTPUT aspect. Default is
+     9:16 (tall, fills width); 16:9 is a centered landscape strip. Bands are the
+     screen area around it — so the two ratios look clearly different. */
+  .media-box { position: absolute; left: 0; right: 0; top: 8.97%; height: 82.05%; overflow: hidden; border-radius: 6px; }
+  .phone-screen.ar-16-9 .media-box { top: 37%; height: 26%; border-radius: 4px; }
+  .media-box video, .media-box iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; display: block; border: 0;
+    background: #000; object-fit: cover;   /* fill the region = previews the reframe crop */
+  }
+  /* Square ("rounded reel") mode: a centered 1:1 square inside the 9:16 canvas,
+     which itself sits centered in the 19.5:9 device screen. */
+  .phone-screen.square .media-box {
+    left: 2.78%; top: 28.2%; right: auto; bottom: auto; width: 94.4%; height: 43.6%;
+    border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.55);
+  }
+  .phone-screen.square .media-box video { object-fit: cover; }   /* fill the square */
+  .frame-title {
+    position: absolute; top: 22%; left: 50%; transform: translateX(-50%); z-index: 3;
+    max-width: 92%; padding: 0 8px;
+    text-align: center; font-weight: 800; font-size: 13px; color: #fff; line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 2px 4px rgba(0,0,0,.85);
+  }
+  .frame-title.placeholder { opacity: .5; }
+  .ph-placeholder {
+    position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center;
+    color: var(--muted-2); font-size: 12px; text-align: center; padding: 0 22px; line-height: 1.5;
+  }
+  .capline {
+    position: absolute; bottom: 7%; left: 0; right: 0; padding: 0 10px; z-index: 3;
+    text-align: center; line-height: 1.12; font-weight: 800; word-break: break-word;
+  }
+
+  /* ---- Caption studio (premium, tabbed customizer) ---- */
+  .customizer {
+    margin-top: 12px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg-2) 100%);
+    overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 18px 40px -28px rgba(0,0,0,.8);
+  }
+  .cust-toggle {
+    width: 100%; display: flex; align-items: center; gap: 11px;
+    padding: 13px 15px; background: none; border: 0; color: var(--text); cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 600; text-align: left;
+  }
+  .cust-toggle .cust-ic {
+    width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px;
+    background: var(--accent-soft); color: var(--accent-hi);
+  }
+  .cust-toggle .cust-ic svg { width: 16px; height: 16px; }
+  .cust-toggle .cust-sub { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted-2); margin-top: 1px; }
+  .cust-toggle .cust-chev { width: 17px; height: 17px; margin-left: auto; transition: transform .25s var(--ease); color: var(--muted-2); }
+  .customizer.open .cust-toggle .cust-chev { transform: rotate(90deg); }
+  .cust-body { padding: 0 0 14px; border-top: 1px solid var(--line); }
+
+  /* Tab bar */
+  .cs-tabs { display: flex; gap: 4px; padding: 10px 12px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+  .cs-tab {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 6px; background: transparent; border: 0; cursor: pointer; border-radius: 9px;
+    color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600;
+    transition: color .15s, background .15s, transform .08s;
+  }
+  .cs-tab svg { width: 15px; height: 15px; }
+  .cs-tab:hover { color: var(--text); }
+  .cs-tab:active { transform: scale(.97); }
+  .cs-tab.active { background: var(--surface-3); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06); }
+  .cs-tab.active svg { color: var(--accent-hi); }
+
+  /* Tab panels */
+  .cs-panel { padding: 16px 15px 4px; display: none; gap: 16px; grid-template-columns: 1fr; animation: csFade .22s var(--ease); }
+  .cs-panel.active { display: grid; }
+  @keyframes csFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .cust-row { display: grid; gap: 8px; }
+  .cust-row > label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .cust-val {
+    font-family: var(--mono); font-size: 11px; color: var(--accent-hi); font-weight: 600;
+    background: var(--accent-soft); padding: 2px 8px; border-radius: 999px;
+  }
+  .cust-inline { display: flex; align-items: center; gap: 12px; }
+  .cust-inline input[type="range"] { flex: 1; }
+
+  /* iOS-style switch (wraps the original checkbox; JS still reads .checked) */
+  .cust-switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); }
+  .cust-switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .cust-switch .track {
+    width: 42px; height: 24px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-2);
+    position: relative; flex: none; transition: background .18s, border-color .18s;
+  }
+  .cust-switch .track::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--muted); transition: transform .2s var(--ease), background .18s;
+  }
+  .cust-switch input:checked + .track { background: var(--accent); border-color: transparent; }
+  .cust-switch input:checked + .track::after { transform: translateX(18px); background: #fff; }
+
+  /* Colour chip — swatch with a caption underneath */
+  .cs-colors { display: flex; flex-wrap: wrap; gap: 14px; }
+  .cs-color { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-2); font-weight: 500; }
+
+  /* 3×3 quick-anchor grid for placement */
+  .anchor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 96px; }
+  .anchor-grid button {
+    aspect-ratio: 1; border: 1px solid var(--line); background: var(--bg-2); border-radius: 7px; cursor: pointer;
+    display: grid; place-items: center; transition: .12s;
+  }
+  .anchor-grid button::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--muted-2); transition: .12s; }
+  .anchor-grid button:hover { border-color: var(--line-2); }
+  .anchor-grid button:hover::before { background: var(--text); }
+  .anchor-grid button.active { border-color: var(--accent); background: var(--accent-soft); }
+  .anchor-grid button.active::before { background: var(--accent-hi); transform: scale(1.4); }
+  .cs-pos-split { display: flex; gap: 16px; align-items: flex-start; }
+  .cs-pos-split .cs-pos-sliders { flex: 1; display: grid; gap: 14px; }
+
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 999px;
+    background: var(--line-2); outline: none; cursor: pointer; margin: 4px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #fff2; box-shadow: 0 0 0 3px var(--accent-soft); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid #fff2; cursor: pointer;
+  }
+  input[type="range"]:disabled { opacity: .4; cursor: not-allowed; }
+  input[type="color"].swatch {
+    -webkit-appearance: none; appearance: none; width: 34px; height: 28px; flex: none; padding: 0;
+    border: 1px solid var(--line-2); border-radius: 8px; background: none; cursor: pointer;
+  }
+  input[type="color"].swatch::-webkit-color-swatch-wrapper { padding: 3px; }
+  input[type="color"].swatch::-webkit-color-swatch { border: 0; border-radius: 5px; }
+  .cs-foot { display: flex; justify-content: flex-end; padding: 12px 15px 2px; margin-top: 4px; border-top: 1px solid var(--line); }
+  .cust-reset {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px; color: var(--muted);
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .cust-reset svg { width: 14px; height: 14px; }
+  .cust-reset:hover { color: var(--text); border-color: var(--line-2); background: var(--surface-2); }
+  .cust-reset:active { transform: scale(.97); }
+  select.cust-select { padding: 11px 38px 11px 13px; font-size: 13.5px; }
+  .cust-row.disabled-row { opacity: .4; pointer-events: none; }
+  #ovLines button { padding: 9px 8px; font-size: 13px; }
+  .cs-color input[type="color"].swatch { width: 100%; height: 36px; }
+  .cs-color .swatch-wrap { width: 54px; }
+
+  /* Caption-preview animation demos (illustrative loops; render is exact). */
+  .cap-row { display: block; }
+  .cap-rev { display: inline-block; opacity: 0; transform: scale(.7); animation: capRev 2.8s ease-in-out infinite; }
+  @keyframes capRev {
+    0% { opacity: 0; transform: scale(.7); }
+    12% { opacity: 1; transform: scale(1); }
+    85% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(.7); }
+  }
+  .cap-one { grid-area: 1 / 1; justify-self: center; align-self: center; white-space: nowrap; opacity: 0; animation: capOne 2.4s steps(1, end) infinite; }
+  @keyframes capOne { 0% { opacity: 1; } 22% { opacity: 1; } 25% { opacity: 0; } 100% { opacity: 0; } }
+
+  /* ---- Caption preset gallery (Step 2) ---- */
+  .cap-presets {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px;
+    max-height: 280px; overflow-y: auto; padding: 3px; margin-bottom: 4px;
+  }
+  .cap-presets::-webkit-scrollbar { width: 8px; }
+  .cap-presets::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 8px; }
+  .cap-chip {
+    position: relative; cursor: pointer; border: 1px solid var(--line); border-radius: 13px;
+    background: #0c0c12; overflow: hidden; padding: 0; transition: border-color .14s, box-shadow .14s, transform .08s;
+  }
+  .cap-chip:hover { border-color: var(--line-2); }
+  .cap-chip:active { transform: scale(.985); }
+  .cap-chip.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .cap-chip .cap-stage {
+    height: 64px; display: flex; align-items: center; justify-content: center; padding: 4px 8px;
+    background: radial-gradient(120% 120% at 50% 0%, #23232c, #0a0a0e); overflow: hidden;
+  }
+  .cap-chip .cap-sample { font-size: 19px; line-height: 1; font-weight: 800; white-space: nowrap; letter-spacing: -.01em; }
+  .cap-chip .cap-name {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 7px 6px; font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--bg-2); border-top: 1px solid var(--line);
+  }
+  .cap-chip.active .cap-name { color: var(--text); }
+  .cap-chip .cap-trend {
+    position: absolute; top: 6px; right: 6px; font-size: 8.5px; font-weight: 800; letter-spacing: .04em;
+    padding: 2px 6px; border-radius: 999px; color: #fff; background: linear-gradient(180deg,#8b6dff,var(--accent));
+    text-transform: uppercase; z-index: 2;
+  }
+  .cap-chip .cap-trend.is-custom { background: linear-gradient(180deg,#34d399,#0f9d6b); }
+
+  /* Save-as-preset toolbar + group labels */
+  .cap-style-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 22px 0 10px; }
+  .cap-style-head .fieldlabel { margin: 0; }
+  .cap-save-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; cursor: pointer;
+    font: inherit; font-size: 11.5px; font-weight: 600; color: var(--accent-hi);
+    background: var(--accent-soft); border: 1px solid var(--line); border-radius: 999px; transition: .12s;
+  }
+  .cap-save-btn:hover { border-color: var(--accent); }
+  .cap-save-btn:active { transform: scale(.97); }
+  .cap-save-btn svg { width: 13px; height: 13px; }
+  .cap-save-form { display: flex; gap: 7px; margin: 4px 0 2px; animation: csFade .16s var(--ease); }
+  .cap-save-form input {
+    flex: 1; min-width: 0; padding: 10px 12px; font: inherit; font-size: 13px; color: var(--text);
+    background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; outline: none;
+  }
+  .cap-save-form input:focus { border-color: var(--accent); }
+  .cap-save-go {
+    flex: none; padding: 0 15px; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; color: #fff;
+    background: var(--accent); border: 0; border-radius: 10px; transition: .12s;
+  }
+  .cap-save-go:hover { filter: brightness(1.08); }
+  .cap-save-go:active { transform: scale(.97); }
+  .cap-save-cancel {
+    flex: none; width: 38px; font-size: 13px; cursor: pointer; color: var(--muted);
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; transition: .12s;
+  }
+  .cap-save-cancel:hover { color: var(--text); border-color: var(--line-2); }
+  .cap-group-label {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+    font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2);
+    padding: 8px 2px 1px;
+  }
+  .cap-group-label:first-child { padding-top: 2px; }
+  .cap-group-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  /* Delete (×) on a custom chip */
+  .cap-chip .cap-del {
+    position: absolute; top: 5px; left: 5px; z-index: 3; width: 20px; height: 20px; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer; padding: 0; line-height: 1;
+    color: #fff; background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.18);
+    opacity: 0; transform: scale(.85); transition: .13s;
+  }
+  .cap-chip:hover .cap-del, .cap-chip.active .cap-del { opacity: 1; transform: none; }
+  .cap-chip .cap-del:hover { background: var(--danger); }
+  .cap-chip .cap-del svg { width: 11px; height: 11px; }
+
+  /* Customizer section headers */
+  .cap-grouphd {
+    display: flex; align-items: center; gap: 9px; margin: 6px 0 -3px;
+    font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--muted-2);
+  }
+  .cap-grouphd:first-child { margin-top: 0; }
+  .cap-grouphd::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  /* ---- AutoCaption-style "Captions" studio panel ---- */
+  .cap-studio {
+    margin-top: 22px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg-2) 100%);
+    box-shadow: 0 24px 60px -36px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .studio-head { display: flex; align-items: center; gap: 9px; padding: 14px 16px 0; }
+  .studio-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+  .studio-title .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 8px; vertical-align: middle; box-shadow: 0 0 10px var(--accent); }
+  .studio-tabs { display: flex; gap: 4px; padding: 12px 12px 0; }
+  .studio-tab {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 11px 8px; background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer;
+    color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; transition: color .15s, border-color .15s;
+  }
+  .studio-tab svg { width: 15px; height: 15px; }
+  .studio-tab:hover { color: var(--text); }
+  .studio-tab.active { color: var(--accent-hi); border-bottom-color: var(--accent); }
+  .studio-pane { padding: 16px; border-top: 1px solid var(--line); }
+  .studio-pane.hidden { display: none; }
+
+  /* Gallery filter chips (Trending / All / My Styles) */
+  .gallery-filters { display: flex; gap: 6px; margin: 2px 0 12px; }
+  .gfilter {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--muted);
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px; transition: .12s;
+  }
+  .gfilter svg { width: 13px; height: 13px; }
+  .gfilter:hover { color: var(--text); border-color: var(--line-2); }
+  .gfilter.active { color: var(--accent-hi); background: var(--accent-soft); border-color: var(--accent); }
+  .gallery-empty { grid-column: 1 / -1; padding: 26px 14px; text-align: center; font-size: 12.5px; color: var(--muted-2); line-height: 1.5; }
+
+  /* "Preview" pill on the phone frame (AutoCaption style) */
+  .preview-pill {
+    position: absolute; top: 12px; left: 12px; z-index: 4; display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--text);
+    background: rgba(10,10,16,.6); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(6px);
+  }
+  .preview-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+  /* Quick font + colour bar at the bottom of the Templates tab */
+  .studio-fontbar {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .studio-fontbar select { flex: 1; min-width: 0; }
+  .studio-fontbar .sfb-swatch { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: var(--muted-2); font-weight: 600; }
+  .studio-fontbar .sfb-swatch .cp-trigger { width: 34px; height: 30px; }
+
+  /* In the studio, the customizer/cinematic shells go borderless (the tab frames them) */
+  .studio-pane .customizer { margin-top: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+  .studio-pane .customizer + .customizer { margin-top: 6px; border-top: 1px solid var(--line); }
+  .studio-pane .cust-body { border-top: 0; }
+  .studio-pane #capCustBody:not(.hidden) { display: block; }
+  .studio-pane .cap-cust-grid { padding: 4px 0 4px; }
+  .studio-pane .cs-foot { padding: 12px 0 2px; }
+
+  /* ---- Caption customizer rows (reuses .customizer / .cust-* shells) ---- */
+  .cap-cust-grid { display: grid; gap: 15px; padding: 16px 15px 4px; }
+  .cap-ctl { display: grid; gap: 8px; }
+  .cap-ctl > label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .cap-ctl .cap-val { font-family: var(--mono); font-size: 11px; color: var(--accent-hi); font-weight: 600; background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+  /* Editable value badge — type a number directly; stays in sync with the slider. */
+  .cap-num { display: inline-flex; align-items: center; gap: 1px; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent-hi); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; transition: border-color .12s; }
+  .cap-num:focus-within { border-color: var(--accent); color: var(--text); }
+  .cap-num input { width: 4ch; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; outline: none; padding: 0; -moz-appearance: textfield; }
+  .cap-num input::-webkit-outer-spin-button, .cap-num input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .cap-font-row { display: flex; gap: 8px; align-items: center; }
+  .cap-font-row select { flex: 1; min-width: 0; }
+  .cap-upload-btn {
+    flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0 13px; height: 44px;
+    font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    color: var(--accent-hi); background: var(--accent-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); transition: .12s;
+  }
+  .cap-upload-btn:hover { border-color: var(--accent); }
+  .cap-upload-btn svg { width: 15px; height: 15px; }
+  .cap-swatches { display: flex; gap: 10px; }
+  .cap-swatch { flex: 1; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; font-size: 11px; color: var(--muted-2); font-weight: 500; }
+  .cap-swatch input[type="color"].swatch { width: 100%; height: 36px; }
+
+  /* ---- Advanced colour picker (trigger swatch + popover) ---- */
+  .cp-trigger {
+    width: 100%; height: 36px; border-radius: 9px; border: 1px solid var(--line-2); cursor: pointer; padding: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), inset 0 0 0 3px rgba(0,0,0,.22); transition: transform .08s, box-shadow .15s;
+  }
+  .cp-trigger:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 0 2px var(--accent-soft); }
+  .cp-trigger:active { transform: scale(.97); }
+  .cp-pop {
+    position: fixed; z-index: 300; width: 236px; padding: 12px; border-radius: 16px; display: none;
+    background: var(--surface-2); border: 1px solid var(--line-2);
+    box-shadow: 0 28px 70px -18px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .cp-pop.open { display: block; animation: pop .14s var(--ease) both; }
+  .cp-area { position: relative; width: 100%; height: 134px; border-radius: 11px; cursor: crosshair; overflow: hidden; touch-action: none; }
+  .cp-cursor {
+    position: absolute; width: 15px; height: 15px; border-radius: 50%; border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.55); transform: translate(-50%, -50%); pointer-events: none;
+  }
+  .cp-hue {
+    position: relative; height: 14px; margin: 13px 0 11px; border-radius: 999px; cursor: pointer; touch-action: none;
+    background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  }
+  .cp-hue-thumb {
+    position: absolute; top: 50%; width: 17px; height: 17px; border-radius: 50%; background: #fff; border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 2px 5px rgba(0,0,0,.5); transform: translate(-50%, -50%); pointer-events: none;
+  }
+  .cp-row { display: flex; align-items: center; gap: 6px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; margin-bottom: 11px; }
+  .cp-row:focus-within { border-color: var(--accent); }
+  .cp-hash { color: var(--muted-2); font-family: var(--mono); font-size: 13px; }
+  .cp-hex { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font-family: var(--mono); font-size: 13px; text-transform: uppercase; outline: none; letter-spacing: .06em; }
+  .cp-presets { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .cp-sw { aspect-ratio: 1; border-radius: 6px; border: 1px solid rgba(255,255,255,.16); cursor: pointer; padding: 0; transition: transform .08s, border-color .12s; }
+  .cp-sw:hover { transform: scale(1.14); border-color: var(--accent); }
+  .cp-sw:active { transform: scale(.95); }
+  /* Nicer caption sliders: taller rounded track with an accent fill (set via JS),
+     a crisp white thumb with a soft accent ring. */
+  input[type="range"].cap-range {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 7px; border-radius: 999px;
+    background: var(--surface-3); outline: none; cursor: pointer; margin: 6px 0;
+  }
+  input[type="range"].cap-range::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 19px; height: 19px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--accent);
+    box-shadow: 0 2px 6px rgba(0,0,0,.45), 0 0 0 4px var(--accent-soft); transition: transform .1s, box-shadow .15s;
+  }
+  input[type="range"].cap-range::-webkit-slider-thumb:hover { transform: scale(1.12); }
+  input[type="range"].cap-range:active::-webkit-slider-thumb { transform: scale(1.18); box-shadow: 0 2px 8px rgba(0,0,0,.5), 0 0 0 6px var(--accent-soft); }
+  input[type="range"].cap-range::-moz-range-thumb {
+    width: 19px; height: 19px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+    box-shadow: 0 2px 6px rgba(0,0,0,.45);
+  }
+  input[type="range"].cap-range::-moz-range-progress { background: var(--accent); height: 7px; border-radius: 999px; }
+  /* Bidirectional (rotation): a centre tick to show the 0° origin. */
+  .cap-range-bi { position: relative; }
+  .cap-rot-wrap { position: relative; }
+  .cap-rot-wrap::before {
+    content: ""; position: absolute; left: 50%; top: -2px; width: 2px; height: 11px; border-radius: 2px;
+    background: var(--muted-2); transform: translateX(-50%); pointer-events: none; z-index: 1;
+  }
+
+  .cap-toggles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .cap-toggles.cap-tg2 { grid-template-columns: repeat(2, 1fr); }
+  /* Vertical effect rows: activate toggle on the left, controls reveal on the right. */
+  .cap-fxrow { display: flex; gap: 10px; align-items: flex-start; }
+  .cap-fxtoggle { flex: none; width: 112px; align-self: flex-start; }
+  .cap-fxbody {
+    flex: 1; min-width: 0; display: grid; gap: 11px; padding: 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--bg-2); animation: csFade .18s var(--ease);
+  }
+  .cap-fxbody.hidden { display: none; }
+  .cap-fxbody label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .cap-fxbody .cap-sub { display: grid; gap: 7px; }
+  .cap-fxbody .cap-swatch { font-size: 11px; color: var(--muted-2); }
+  @media (max-width: 620px) { .cap-fxrow { flex-direction: column; } .cap-fxtoggle { width: 100%; } }
+  .cap-tg {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 6px; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--muted);
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; transition: .12s;
+  }
+  .cap-tg:hover { color: var(--text); border-color: var(--line-2); }
+  .cap-tg.active { border-color: var(--accent); color: var(--accent-hi); background: var(--accent-soft); }
+  .cap-upnote { font-size: 11.5px; color: var(--muted-2); }
+  .cap-upnote.err { color: var(--danger); }
+
+  /* ---- Cinematic FX preview overlay (inside the phone frame) ---- */
+  .cine-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; border-radius: inherit; }
+  .cine-overlay .cine-grad, .cine-overlay .cine-vig, .cine-overlay .cine-bar { position: absolute; left: 0; right: 0; display: none; }
+  .cine-grad-bottom { bottom: 0; height: 60%; }
+  .cine-grad-top { top: 0; height: 60%; }
+  .cine-vig { inset: 0; }
+  .cine-bar { left: 0; right: 0; height: 9%; background: #000; }
+  .cine-bar-top { top: 0; }
+  .cine-bar-bottom { bottom: 0; }
+
+  /* ---- Live caption preview inside the phone frame ---- */
+  .cap-preview {
+    position: absolute; left: 0; right: 0; z-index: 3; display: flex; justify-content: center;
+    padding: 0 10px; pointer-events: none; text-align: center;
+  }
+  .cap-preview.pos-bottom { bottom: 13%; }
+  .cap-preview.pos-top { top: 15%; }
+  .cap-preview.pos-center { top: 50%; transform: translateY(-50%); }
+  /* In 16:9 the clip is a centered strip (37%–63%); keep captions inside it. */
+  .phone-screen.ar-16-9 .cap-preview.pos-bottom { bottom: 38%; }
+  .phone-screen.ar-16-9 .cap-preview.pos-top { top: 38%; }
+  .cap-preview .cap-line { display: inline-block; font-weight: 800; line-height: 1.12; word-break: break-word; max-width: 100%; }
+  .cap-preview .cap-box { padding: .12em .3em; border-radius: .18em; }
+  /* Free placement: anchored at a point (drag). */
+  .cap-preview.free { left: 0; right: auto; bottom: auto; padding: 0; width: auto; max-width: 88%; justify-content: center; transform: translate(-50%, -50%); }
+  .cap-preview .cap-line { pointer-events: auto; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .cap-preview.dragging .cap-line { cursor: grabbing; }
+  .cap-preview.dragging { outline: none; }
+  /* Snap guide lines (top / centre / bottom), shown only while dragging. */
+  .cap-guides { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .15s; }
+  .cap-guides.on { opacity: 1; }
+  .cap-guides i { position: absolute; left: 6%; right: 6%; height: 1px; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 12px); opacity: .7; }
+
+  /* ---- Dropdown ---- */
+  select.dropdown {
+    width: 100%; padding: 14px 42px 14px 16px; font-size: 15px; font-family: inherit;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    color: var(--text); outline: none; cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat; background-position: right 15px center;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  select.dropdown:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  select.dropdown option { background: var(--surface-2); color: var(--text); }
+  select.dropdown option:disabled { color: var(--muted-2); }
+
+  .devstatus { display: flex; align-items: center; gap: 9px; margin-top: 11px; font-size: 13px; color: var(--muted); }
+  .devstatus .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; transition: .2s; }
+  .devstatus.loading { color: var(--warn); }
+  .devstatus.loading .sdot { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  .devstatus.ready { color: var(--accent-hi); }
+  .devstatus.ready .sdot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .devstatus.err { color: var(--danger); }
+  .devstatus.err .sdot { background: var(--danger); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  /* ---- Background download status (Step 2, below the preview) ---- */
+  .dlstatus {
+    margin-top: 16px; padding: 13px 14px; border-radius: var(--radius-sm);
+    background: var(--bg-2); border: 1px solid var(--line); animation: csFade .22s var(--ease);
+  }
+  .dlstatus-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+  .dlstatus-msg { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 12.5px; font-weight: 500; color: var(--text); }
+  .dlstatus-msg span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dlstatus-msg .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; transition: .2s; }
+  .dlstatus-pct { flex: none; font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent-hi); }
+  .dlstatus-track { height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; border: 1px solid var(--line); }
+  .dlstatus-bar {
+    height: 100%; width: 0%; border-radius: 999px; transition: width .35s var(--ease);
+    background: linear-gradient(90deg, var(--accent), var(--accent-hi)); background-size: 200% 100%;
+  }
+  .dlstatus-bar.indeterminate { width: 40% !important; animation: shimmer 1.1s linear infinite; }
+  .dlstatus.loading .sdot { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  .dlstatus.loading .dlstatus-pct { color: var(--warn); }
+  .dlstatus.ready { border-color: rgba(108,76,255,.4); }
+  .dlstatus.ready .sdot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .dlstatus.ready .dlstatus-bar { background: var(--accent); }
+  .dlstatus.err { border-color: rgba(226,59,83,.4); background: var(--danger-soft); }
+  .dlstatus.err .sdot { background: var(--danger); }
+  .dlstatus.err .dlstatus-msg { color: #b4344a; }
+  .dlstatus.err .dlstatus-pct { display: none; }
+  .dlstatus-retry {
+    margin-top: 11px; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 14px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    color: var(--danger); background: rgba(226,59,83,.08); border: 1px solid rgba(226,59,83,.3); border-radius: 9px; transition: .12s;
+  }
+  .dlstatus-retry svg { width: 14px; height: 14px; }
+  .dlstatus-retry:hover { background: rgba(226,59,83,.16); }
+
+  /* ---- Status panel polish: live sheen, pinging dot, ready check ---- */
+  .dlstatus { transition: border-color .25s var(--ease), background .25s var(--ease); }
+  .dlstatus-bar { position: relative; overflow: hidden; }
+  .dlstatus.loading .dlstatus-bar::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+    transform: translateX(-100%); animation: dlSheen 1.5s ease-in-out infinite;
+  }
+  @keyframes dlSheen { to { transform: translateX(260%); } }
+  .dlstatus-msg .sdot { position: relative; transition: background .25s, transform .25s var(--ease); }
+  .dlstatus.loading .sdot::after {
+    content: ""; position: absolute; inset: -4px; border-radius: 50%;
+    border: 1.5px solid currentColor; color: var(--warn); opacity: .55; animation: dlPing 1.25s ease-out infinite;
+  }
+  @keyframes dlPing { 0% { transform: scale(.55); opacity: .6; } 100% { transform: scale(1.9); opacity: 0; } }
+  /* Ready: the dot becomes a check + the bar flashes once. */
+  .dlstatus.ready .sdot { transform: scale(1.15); }
+  .dlstatus.ready .sdot::after {
+    content: ""; position: absolute; left: 50%; top: 47%; width: 2.5px; height: 5.5px;
+    border: solid #fff; border-width: 0 1.6px 1.6px 0; transform: translate(-50%, -62%) rotate(45deg);
+  }
+  .dlstatus.ready .dlstatus-bar { animation: dlReady .55s var(--ease); }
+  @keyframes dlReady { 0% { filter: brightness(1.7); } 100% { filter: brightness(1); } }
+  .dlstatus-pct { transition: color .25s; }
+
+  /* ---- Upload dropzone ---- */
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 34px 18px; cursor: pointer; text-align: center;
+    background: var(--bg-2); border: 1.5px dashed var(--line-2); border-radius: var(--radius-sm);
+    color: var(--muted); transition: border-color .15s, background .15s, color .15s;
+  }
+  .dropzone:hover { border-color: var(--accent); color: var(--text); }
+  .dropzone.dragover { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+  .dropzone.loaded { border-style: solid; border-color: var(--accent); color: var(--text); }
+  .dropzone .dz-ic svg { width: 26px; height: 26px; color: var(--muted); }
+  .dropzone:hover .dz-ic svg, .dropzone.loaded .dz-ic svg { color: var(--accent-hi); }
+  .dropzone .dz-main { font-size: 14.5px; font-weight: 600; }
+  .dropzone .dz-sub { font-size: 12px; color: var(--muted-2); }
+  .remove-btn {
+    margin-top: 10px; display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 14px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    background: var(--danger-soft); color: var(--danger); border: 1px solid rgba(241,85,108,.3); border-radius: 10px;
+    transition: background .12s;
+  }
+  .remove-btn svg { width: 14px; height: 14px; }
+  .remove-btn:hover { background: rgba(241,85,108,.2); }
+
+  .hidden { display: none !important; }
+
+  .generate {
+    width: 100%; margin-top: 28px; padding: 16px; font-size: 16px; font-weight: 700; font-family: inherit;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    color: #fff; border: 0; border-radius: var(--radius-sm); cursor: pointer; letter-spacing: -0.01em;
+    background: linear-gradient(180deg, #2c2c38, #131320);
+    box-shadow: 0 14px 30px -12px rgba(20,18,40,.5), inset 0 1px 0 rgba(255,255,255,.14);
+    transition: transform .1s var(--ease), filter .15s, opacity .15s;
+  }
+  .generate svg { width: 18px; height: 18px; }
+  .generate:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+  .generate:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+  .generate:disabled { opacity: .7; cursor: progress; box-shadow: none; filter: saturate(.6); }
+
+  .error {
+    margin-top: 18px; padding: 14px 16px; border-radius: var(--radius-sm);
+    background: var(--danger-soft); border: 1px solid rgba(241,85,108,.3); color: #ffb3bd; font-size: 14px;
+    white-space: pre-wrap; display: flex; gap: 11px; align-items: flex-start; line-height: 1.5;
+  }
+  .error svg { width: 17px; height: 17px; flex: none; margin-top: 1px; color: var(--danger); }
+
+  /* ---- Progress panel ---- */
+  .progress-panel {
+    margin-top: 22px; padding: 22px; border-radius: var(--radius);
+    background: var(--bg-2); border: 1px solid var(--line);
+  }
+  .steps { display: flex; gap: 8px; margin-bottom: 22px; }
+  .step { flex: 1; text-align: center; position: relative; }
+  .step .ring {
+    width: 36px; height: 36px; margin: 0 auto 9px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 14px; font-weight: 700; font-family: var(--mono);
+    background: var(--surface); border: 1.5px solid var(--line-2); color: var(--muted-2); transition: .3s var(--ease);
+  }
+  .step .label { font-size: 11px; font-weight: 600; color: var(--muted-2); letter-spacing: .02em; transition: .3s; }
+  .step::before {
+    content: ""; position: absolute; top: 18px; left: -50%; width: 100%; height: 2px;
+    background: var(--line); z-index: 0;
+  }
+  .step:first-child::before { display: none; }
+  .step .ring { position: relative; z-index: 1; }
+  .step.active .ring { border-color: var(--accent); color: var(--accent-hi); background: var(--accent-soft); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .step.active .label { color: var(--text); }
+  .step.done .ring { border-color: var(--accent); color: #06120d; background: var(--accent); }
+  .step.done .label { color: var(--text); }
+  .step.done::before { background: var(--accent); }
+
+  .bar-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .bar-msg { font-size: 13.5px; color: var(--text); font-weight: 500; display: flex; align-items: center; gap: 10px; }
+  .bar-pct { font-size: 13.5px; color: var(--accent-hi); font-weight: 700; font-family: var(--mono); }
+  .bar-track { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; border: 1px solid var(--line); }
+  .bar-fill {
+    height: 100%; width: 0%; border-radius: 999px; transition: width .4s var(--ease);
+    background: linear-gradient(90deg, var(--accent), var(--accent-hi));
+    background-size: 200% 100%;
+  }
+  .bar-fill.indeterminate { animation: shimmer 1.1s linear infinite; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .bar-fill.error { background: var(--danger); }
+  .bar-fill.done { background: var(--accent); }
+
+  .spinner {
+    display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.25); border-top-color: currentColor;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Results ---- */
+  .results-head { margin: 38px 0 4px; display: flex; align-items: baseline; justify-content: space-between; }
+  .results-head h2 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.02em; }
+  .results-head span { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  .results, .cv-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+  .clip {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden;
+    animation: pop .35s var(--ease) both; transition: transform .15s var(--ease), border-color .15s, box-shadow .2s;
+  }
+  .clip:hover { transform: translateY(-3px); border-color: var(--line-2); box-shadow: 0 20px 40px -22px rgba(0,0,0,.8); }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+  .clip video { width: 100%; display: block; background: #000; aspect-ratio: 9/16; object-fit: contain; }
+  .clip .meta { padding: 13px 14px; }
+  .clip .meta h3 { margin: 0 0 5px; font-size: 14px; line-height: 1.3; font-weight: 600; }
+  .clip .meta .sub { color: var(--muted-2); font-size: 12px; font-family: var(--mono); }
+  .clip .meta .actions { margin-top: 12px; display: flex; gap: 8px; }
+  .clip .meta a, .clip .meta button.copy {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px; font-size: 12.5px; font-weight: 600; font-family: inherit;
+    border-radius: 9px; text-decoration: none; cursor: pointer; transition: .12s; border: 1px solid var(--line);
+  }
+  .clip .meta a svg { width: 14px; height: 14px; }
+  .clip .meta a { color: #06120d; background: var(--accent); border: 0; }
+  .clip .meta a:hover { filter: brightness(1.06); }
+  .clip .meta button.copy { color: var(--muted); background: var(--bg-2); }
+  .clip .meta button.copy:hover { color: var(--text); border-color: var(--line-2); }
+
+  footer { text-align: center; color: var(--muted-2); font-size: 12px; margin-top: 44px; font-family: var(--mono); }
+
+  /* ---- Shared more-menu + clip-card video ---- */
+  .clipcard-vid { position: relative; background: #000; }
+  .clipcard-vid .dots {
+    position: absolute; top: 9px; right: 9px; width: 30px; height: 30px; border-radius: 9px;
+    display: grid; place-items: center; color: #fff; cursor: pointer; z-index: 4;
+    background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(6px);
+  }
+  .clipcard-vid .dots svg { width: 16px; height: 16px; }
+  .clipcard-vid .dots:hover { background: rgba(0,0,0,.8); }
+  .menu {
+    position: absolute; top: 44px; right: 9px; z-index: 5; min-width: 184px; padding: 6px;
+    background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--radius-sm);
+    box-shadow: 0 18px 40px rgba(0,0,0,.6); animation: pop .14s var(--ease) both;
+  }
+  .menu button {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
+    font-size: 13px; font-weight: 500; font-family: inherit; text-align: left; cursor: pointer; border-radius: 8px;
+    color: var(--text); background: transparent; border: 0; transition: background .1s;
+  }
+  .menu button svg { width: 16px; height: 16px; color: var(--muted); }
+  .menu button:hover { background: var(--surface-3); }
+  .menu button.danger { color: var(--danger); }
+  .menu button.danger svg { color: var(--danger); }
+  .menu button.danger:hover { background: var(--danger-soft); }
+
+  /* ---- Left history sidebar ---- */
+  .sidebar {
+    width: 300px; flex: none; height: 100dvh; position: sticky; top: 0;
+    display: flex; flex-direction: column; background: var(--bg-2);
+    border-right: 1px solid var(--line); transition: margin-left .25s var(--ease);
+  }
+  body.sidebar-collapsed .sidebar { margin-left: -301px; }
+  .side-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 16px; border-bottom: 1px solid var(--line);
+  }
+  .side-title { font-weight: 700; font-size: 14.5px; display: inline-flex; align-items: center; gap: 9px; letter-spacing: -0.01em; }
+  .side-title svg { width: 17px; height: 17px; color: var(--accent-hi); }
+  .side-head-btns { display: flex; gap: 6px; }
+  .side-icon {
+    width: 32px; height: 32px; border-radius: 9px; cursor: pointer; display: grid; place-items: center;
+    color: var(--muted); background: var(--surface); border: 1px solid var(--line); transition: .12s;
+  }
+  .side-icon svg { width: 15px; height: 15px; }
+  .side-icon:hover { color: var(--text); border-color: var(--line-2); }
+  .side-empty { padding: 36px 18px; color: var(--muted-2); font-size: 13px; text-align: center; line-height: 1.55; }
+  .side-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* ---- History panel: one row per processed video ---- */
+  .side-video {
+    display: flex; gap: 12px; align-items: center; padding: 10px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); transition: .14s var(--ease);
+  }
+  .side-video:hover { border-color: var(--line-2); transform: translateX(2px); }
+  .side-video .vthumb {
+    position: relative; width: 48px; height: 74px; flex: none; border-radius: 9px;
+    overflow: hidden; background: #000; display: grid; place-items: center;
+  }
+  .side-video .vthumb video { width: 100%; height: 100%; object-fit: cover; }
+  .side-video .vthumb .vcount {
+    position: absolute; bottom: 4px; right: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--mono);
+    font-size: 10px; font-weight: 700; color: #fff; background: rgba(0,0,0,.72);
+  }
+  .side-video .vinfo { flex: 1; min-width: 0; }
+  .side-video .vname {
+    font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .side-video .vname svg { width: 13px; height: 13px; flex: none; color: var(--muted); }
+  .side-video .vname span { overflow: hidden; text-overflow: ellipsis; }
+  .side-video .vsub { font-size: 11px; color: var(--muted-2); margin-top: 4px; }
+  .side-video .vchev { color: var(--muted-2); flex: none; display: grid; }
+  .side-video .vchev svg { width: 16px; height: 16px; }
+
+  .side-reopen {
+    position: fixed; top: 16px; left: 16px; z-index: 60; display: none;
+    align-items: center; gap: 9px; height: 42px; padding: 0 16px;
+    border-radius: 11px; font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer;
+    color: var(--text); background: var(--surface-2);
+    border: 1px solid var(--line-2); box-shadow: 0 10px 26px -12px rgba(0,0,0,.8);
+  }
+  .side-reopen svg { width: 16px; height: 16px; color: var(--accent-hi); }
+  .side-reopen:hover { border-color: var(--accent); }
+  body.sidebar-collapsed .side-reopen { display: inline-flex; }
+
+  /* ---- Clips view (per-video "page") ---- */
+  .clips-view {
+    position: fixed; inset: 0; z-index: 80; overflow-y: auto;
+    background:
+      radial-gradient(900px 500px at 80% -8%, rgba(47,183,132,.07), transparent 60%),
+      var(--bg);
+    animation: rise .35s var(--ease) both;
+  }
+  .cv-head {
+    position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap; padding: 16px 24px; border-bottom: 1px solid var(--line);
+    background: rgba(9,9,11,.8); backdrop-filter: blur(14px);
+  }
+  .cv-back {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; cursor: pointer;
+    font-size: 13.5px; font-weight: 600; font-family: inherit; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 11px; transition: .12s;
+  }
+  .cv-back svg { width: 16px; height: 16px; }
+  .cv-back:hover { border-color: var(--line-2); }
+  .cv-titlebox { flex: 1; min-width: 180px; }
+  .cv-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted-2); }
+  .cv-title {
+    font-size: 18px; font-weight: 700; margin-top: 3px; letter-spacing: -0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw;
+  }
+  .cv-switch { display: flex; align-items: center; gap: 10px; }
+  .cv-switch label { font-size: 11px; font-weight: 600; color: var(--muted-2); white-space: nowrap; text-transform: uppercase; letter-spacing: .08em; }
+  .cv-switch select.dropdown { width: auto; min-width: 200px; max-width: 320px; padding: 11px 40px 11px 14px; }
+  .cv-body { max-width: 1140px; margin: 0 auto; padding: 28px 24px 90px; }
+  .cv-empty { text-align: center; color: var(--muted); padding: 70px 20px; font-size: 14px; }
+  .clip.gone { opacity: .5; }
+  .clip.gone .clipcard-vid::after {
+    content: "File removed"; position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--muted); font-size: 12px; background: rgba(0,0,0,.6); z-index: 3;
+  }
+</style>
+</head>
+<body class="sidebar-collapsed">
+<!-- Shared advanced colour picker popover (anchored to whichever swatch opens it). -->
+<div class="cp-pop" id="cpPop">
+  <div class="cp-area" id="cpArea"><span class="cp-cursor" id="cpCursor"></span></div>
+  <div class="cp-hue" id="cpHue"><span class="cp-hue-thumb" id="cpHueThumb"></span></div>
+  <div class="cp-row"><span class="cp-hash">#</span><input id="cpHex" class="cp-hex" spellcheck="false" maxlength="7" /></div>
+  <div class="cp-presets" id="cpPresets"></div>
+</div>
+<aside class="sidebar" id="sidebar">
+  <div class="side-head">
+    <span class="side-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+      History
+    </span>
+    <div class="side-head-btns">
+      <button id="sideRefresh" class="side-icon" title="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+      <button id="sideCollapse" class="side-icon" title="Hide panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="sideEmpty" class="side-empty hidden">No history yet — generate clips and your videos will appear here.</div>
+  <div id="sideList" class="side-list"></div>
+</aside>
+<button id="sideReopen" class="side-reopen" title="Show processed videos">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+  History
+</button>
+<main class="main">
+<div class="wrap">
+  <nav class="topnav">
+    <div class="logo">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+      </span>
+      <span>ClipForge</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-badge"><span class="dot"></span> Local · Whisper on <b id="deviceTag">…</b></span>
+      <button class="nav-history" id="navHistory">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+        History
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============ STEP 1 · LANDING ============ -->
+  <div class="wstep landing" id="step1">
+    <div class="trust">
+      <span class="trust-faces"><i></i><i></i><i></i><i></i></span>
+      100% local · runs on your machine · no sign-up
+    </div>
+    <h1 class="hero-title">Turn videos into <span class="grad">viral shorts</span></h1>
+    <p class="hero-sub">Create TikToks, Reels &amp; Shorts from your long videos in just one click.</p>
+
+    <div class="megabar" id="megabar">
+      <button type="button" class="mega-up" id="megaUpload" title="Upload a file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <input type="file" id="fileInput" accept="video/*" hidden />
+      <input id="url" class="mega-input" type="text" placeholder="Paste a YouTube link or drop a file…" />
+      <button class="generate mega-go" id="toStep2" disabled>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
+        Continue
+      </button>
+    </div>
+    <div class="mega-foot">Free &amp; unlimited · No API keys · No credit card required</div>
+    <div class="devstatus hidden" id="upStatus"><span class="sdot"></span><span id="upStatusText"></span></div>
+    <button type="button" id="removeUpload" class="remove-btn hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Remove video
+    </button>
+    <div id="error1" class="error hidden"></div>
+
+    <div class="credits">
+      <span class="credits-label">Powered by a 100% local pipeline</span>
+      <span class="credit">yt-dlp</span>
+      <span class="credit">faster-whisper</span>
+      <span class="credit">ffmpeg</span>
+    </div>
+  </div>
+
+  <!-- ============ STEP 2 · CONFIGURE ============ -->
+  <div class="wstep hidden" id="step2">
+    <div class="card">
+      <div class="wstep-head">
+        <button type="button" class="wback" id="backToStep1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <div>
+          <span class="wstep-eyebrow">Step 2 of 2</span>
+          <span class="wstep-title">Settings &amp; preview</span>
+        </div>
+      </div>
+
+      <div class="config-grid">
+        <div class="cfg-left">
+          <label class="fieldlabel">Compute (Whisper)</label>
+          <select id="device" class="dropdown">
+            <option value="auto">Auto — GPU if available, else CPU</option>
+            <option value="cuda">GPU (CUDA) — fastest</option>
+            <option value="cpu">CPU — works everywhere</option>
+          </select>
+          <div class="devstatus" id="devStatus"><span class="sdot"></span><span id="devStatusText">Checking…</span></div>
+
+          <label class="fieldlabel">Aspect ratio</label>
+          <div class="toggle" id="aspect">
+            <button data-val="9:16" class="active">9:16</button>
+            <button data-val="16:9">16:9</button>
+          </div>
+
+          <label class="fieldlabel">Fit mode</label>
+          <div class="toggle" id="fit">
+            <button data-val="crop" class="active">Crop</button>
+            <button data-val="square">Square</button>
+          </div>
+
+          <div id="barWrap" class="hidden">
+            <label class="fieldlabel">Title text (top)</label>
+            <input id="barText" class="barinput" type="text" placeholder="Title shown over the top of the square…" />
+          </div>
+
+          <label class="fieldlabel">Clips</label>
+          <div class="counter">
+            <button id="minus" type="button">−</button>
+            <input id="numClips" type="number" min="1" max="10" value="3" />
+            <button id="plus" type="button">+</button>
+          </div>
+
+          <div class="cap-studio">
+            <div class="studio-head"><span class="studio-title"><span class="dot"></span>Captions</span></div>
+            <div class="studio-tabs">
+              <button type="button" class="studio-tab active" data-stab="templates">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                Templates
+              </button>
+              <button type="button" class="studio-tab" data-stab="customize">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+                Customize styles
+              </button>
+            </div>
+
+          <div class="studio-pane" id="stabTemplates">
+          <label class="fieldlabel">Caption language</label>
+          <select id="capLang" class="dropdown">
+            <option value="auto">Auto-detect</option>
+            <option value="en">English</option>
+            <option value="hinglish">Hinglish — Roman Urdu / Hindi</option>
+            <option value="ur">Urdu — اردو</option>
+            <option value="hi">Hindi — हिन्दी</option>
+            <option value="ar">Arabic — العربية</option>
+            <option value="fa">Persian — فارسی</option>
+            <option value="pa">Punjabi — ਪੰਜਾਬੀ</option>
+            <option value="bn">Bengali — বাংলা</option>
+            <option value="es">Spanish — Español</option>
+            <option value="fr">French — Français</option>
+            <option value="de">German — Deutsch</option>
+            <option value="pt">Portuguese — Português</option>
+            <option value="ru">Russian — Русский</option>
+            <option value="tr">Turkish — Türkçe</option>
+            <option value="id">Indonesian — Bahasa</option>
+            <option value="ja">Japanese — 日本語</option>
+            <option value="ko">Korean — 한국어</option>
+            <option value="zh">Chinese — 中文</option>
+          </select>
+          <div class="cap-upnote" id="capLangNote">Captions are transcribed in this language; clip files are named in it too.</div>
+
+          <div class="cap-style-head">
+            <label class="fieldlabel">Caption style</label>
+            <button type="button" class="cap-save-btn" id="capSaveBtn" title="Save the current look as a reusable preset">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save current
+            </button>
+          </div>
+          <div class="cap-save-form hidden" id="capSaveForm">
+            <input type="text" id="capSaveName" placeholder="Name your style…" maxlength="40" autocomplete="off" />
+            <button type="button" class="cap-save-go" id="capSaveGo">Save</button>
+            <button type="button" class="cap-save-cancel" id="capSaveCancel" title="Cancel">✕</button>
+          </div>
+          <div class="gallery-filters" id="galleryFilters">
+            <button type="button" class="gfilter active" data-gf="all">All</button>
+            <button type="button" class="gfilter" data-gf="trending">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .3-2 .7-2.7C9 8 9 9 10 9c0-2 1-5 2-7z"/></svg>
+              Trending
+            </button>
+            <button type="button" class="gfilter" data-gf="mine">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9"/></svg>
+              My Styles
+            </button>
+          </div>
+          <div class="cap-presets" id="capPresets"></div>
+          </div><!-- /stabTemplates -->
+
+          <div class="studio-pane hidden" id="stabCustomize">
+          <div class="customizer" id="capCustomizer">
+            <button type="button" class="cust-toggle" id="capCustToggle">
+              <span class="cust-ic">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+              </span>
+              <span>Customize captions<span class="cust-sub">Font · colours · size · position · animation · emphasis</span></span>
+              <svg class="cust-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <div class="cust-body hidden" id="capCustBody">
+              <div class="cap-cust-grid">
+                <div class="cap-grouphd"><span>Typography</span></div>
+                <div class="cap-ctl">
+                  <label>Font <span class="cap-val" id="capFontVal">Roboto</span></label>
+                  <div class="cap-font-row">
+                    <select id="capFont" class="dropdown"></select>
+                    <button type="button" class="cap-upload-btn" id="capFontUpload">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      Upload
+                    </button>
+                  </div>
+                  <input type="file" id="capFontInput" accept=".ttf,.otf,font/ttf,font/otf" hidden />
+                  <div class="cap-upnote" id="capFontNote"></div>
+                </div>
+
+                <div class="cap-ctl">
+                  <label>Animation</label>
+                  <select id="capAnim" class="dropdown">
+                    <option value="none">None — static</option>
+                    <option value="highlight">Highlight active word</option>
+                    <option value="word_reveal">Word reveal</option>
+                    <option value="one_word">One word at a time</option>
+                    <option value="karaoke">Karaoke fill</option>
+                  </select>
+                </div>
+
+                <div class="cap-grouphd"><span>Colours</span></div>
+                <div class="cap-ctl">
+                  <label>Colours</label>
+                  <div class="cap-swatches">
+                    <label class="cap-swatch">Text<button type="button" class="cp-trigger" id="capPrimary" data-cp="primary_color" data-def="#FFFFFF"></button></label>
+                    <label class="cap-swatch">Highlight<button type="button" class="cp-trigger" id="capHighlight" data-cp="highlight_color" data-def="#FFD400"></button></label>
+                    <label class="cap-swatch">Outline<button type="button" class="cp-trigger" id="capOutlineColor" data-cp="outline_color" data-def="#000000"></button></label>
+                  </div>
+                </div>
+
+                <div class="cap-grouphd"><span>Size &amp; spacing</span></div>
+                <div class="cap-ctl">
+                  <label>Size <span class="cap-num"><input type="number" id="capSizeNum" min="60" max="180" step="5" value="100" />%</span></label>
+                  <input type="range" class="cap-range" id="capSize" min="0.6" max="1.8" step="0.05" value="1" />
+                </div>
+
+                <div class="cap-ctl">
+                  <label>Letter spacing <span class="cap-num"><input type="number" id="capTrackingNum" min="0" max="30" step="1" value="0" />px</span></label>
+                  <input type="range" class="cap-range" id="capTracking" min="0" max="30" step="1" value="0" />
+                </div>
+
+                <div class="cap-ctl">
+                  <label>Outline <span class="cap-num"><input type="number" id="capOutlineNum" min="0" max="16" step="1" value="5" />px</span></label>
+                  <input type="range" class="cap-range" id="capOutline" min="0" max="16" step="1" value="5" />
+                </div>
+
+                <div class="cap-grouphd"><span>Position</span></div>
+                <div class="cap-ctl">
+                  <div class="cap-upnote">Drag the caption in the preview (snaps to edges &amp; centre), or fine-tune with the sliders.</div>
+                </div>
+                <div class="cap-ctl">
+                  <label>X position <span class="cap-num"><input type="number" id="capPosXNum" min="0" max="100" step="1" value="50" />%</span></label>
+                  <input type="range" class="cap-range" id="capPosX" min="0" max="100" step="1" value="50" />
+                </div>
+                <div class="cap-ctl">
+                  <label>Y position <span class="cap-num"><input type="number" id="capPosYNum" min="0" max="100" step="1" value="88" />%</span></label>
+                  <input type="range" class="cap-range" id="capPosY" min="0" max="100" step="1" value="88" />
+                </div>
+                <div class="cap-ctl">
+                  <label>Rotation <span class="cap-num"><input type="number" id="capRotationNum" min="-180" max="180" step="1" value="0" />°</span></label>
+                  <div class="cap-rot-wrap"><input type="range" class="cap-range cap-range-bi" id="capRotation" min="-180" max="180" step="1" value="0" /></div>
+                </div>
+
+                <div class="cap-grouphd"><span>Emphasis &amp; effects</span></div>
+                <div class="cap-ctl">
+                  <label>Style</label>
+                  <div class="cap-toggles cap-tg2">
+                    <button class="cap-tg" data-k="bold" type="button">Bold</button>
+                    <button class="cap-tg" data-k="uppercase" type="button">UPPER</button>
+                  </div>
+
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-k="background_enabled" type="button">Box</button>
+                    <div class="cap-fxbody hidden" id="capBoxFx">
+                      <div class="cap-swatches"><label class="cap-swatch">Colour<button type="button" class="cp-trigger" id="capBoxColor" data-cp="background_color" data-def="#000000"></button></label></div>
+                      <div class="cap-sub"><label>Opacity <span class="cap-num"><input type="number" id="capBoxOpacityNum" min="0" max="100" step="1" value="100" />%</span></label><input type="range" class="cap-range" id="capBoxOpacity" min="0" max="100" step="1" value="100" /></div>
+                      <div class="cap-sub"><label>Corner radius <span class="cap-num"><input type="number" id="capBoxRadiusNum" min="0" max="40" step="1" value="10" />px</span></label><input type="range" class="cap-range" id="capBoxRadius" min="0" max="40" step="1" value="10" /></div>
+                      <div class="cap-upnote">Rounded corners are preview-only; the exported box is square.</div>
+                    </div>
+                  </div>
+
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-k="shadow_enabled" type="button">Drop shadow</button>
+                    <div class="cap-fxbody hidden" id="capShadowFx">
+                      <div class="cap-swatches"><label class="cap-swatch">Colour<button type="button" class="cp-trigger" id="capShadowColor" data-cp="shadow_color" data-def="#000000"></button></label></div>
+                      <div class="cap-sub"><label>Distance <span class="cap-num"><input type="number" id="capShadowDistNum" min="0" max="30" step="1" value="6" />px</span></label><input type="range" class="cap-range" id="capShadowDist" min="0" max="30" step="1" value="6" /></div>
+                      <div class="cap-sub"><label>Opacity <span class="cap-num"><input type="number" id="capShadowOpacityNum" min="0" max="100" step="1" value="75" />%</span></label><input type="range" class="cap-range" id="capShadowOpacity" min="0" max="100" step="1" value="75" /></div>
+                    </div>
+                  </div>
+
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-k="glow_enabled" type="button">Glow</button>
+                    <div class="cap-fxbody hidden" id="capGlowFx">
+                      <div class="cap-swatches"><label class="cap-swatch">Colour<button type="button" class="cp-trigger" id="capGlowColor" data-cp="glow_color" data-def="#7C4DFF"></button></label></div>
+                      <div class="cap-sub"><label>Intensity <span class="cap-num"><input type="number" id="capGlowNum" min="0" max="30" step="1" value="10" />px</span></label><input type="range" class="cap-range" id="capGlow" min="0" max="30" step="1" value="10" /></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="cs-foot">
+                <button type="button" class="cust-reset" id="capReset">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Reset to preset
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cinematic effects (applied to the footage, under the captions) -->
+          <div class="customizer" id="capCine">
+            <button type="button" class="cust-toggle" id="capCineToggle">
+              <span class="cust-ic">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h20M2 17h20M7 2v20M17 2v20"/><rect x="2" y="2" width="20" height="20" rx="3"/></svg>
+              </span>
+              <span>Cinematic effects<span class="cust-sub">Gradient · glow · vignette · grain · colour grade · bars</span></span>
+              <svg class="cust-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <div class="cust-body hidden" id="capCineBody">
+              <div class="cap-cust-grid">
+                <div class="cap-grouphd"><span>Colour grade</span></div>
+                <div class="cap-ctl">
+                  <label>Look</label>
+                  <select id="cineGrade" class="dropdown">
+                    <option value="none">None — original</option>
+                    <option value="warm">Warm</option>
+                    <option value="cool">Cool</option>
+                    <option value="teal_orange">Teal &amp; Orange</option>
+                    <option value="vintage">Vintage</option>
+                    <option value="vibrant">Vibrant</option>
+                    <option value="bw">Black &amp; White</option>
+                  </select>
+                </div>
+
+                <div class="cap-grouphd"><span>Gradients</span></div>
+                <div class="cap-ctl">
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-cine="bottom_gradient" type="button">Bottom fade</button>
+                    <div class="cap-fxbody hidden" id="cineBottomFx">
+                      <div class="cap-sub"><label>Height <span class="cap-num"><input type="number" id="cineBottomHNum" min="0" max="80" value="25" />%</span></label><input type="range" class="cap-range" id="cineBottomH" min="0" max="80" value="25" /></div>
+                      <div class="cap-sub"><label>Strength <span class="cap-num"><input type="number" id="cineBottomSNum" min="0" max="100" value="70" />%</span></label><input type="range" class="cap-range" id="cineBottomS" min="0" max="100" value="70" /></div>
+                    </div>
+                  </div>
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-cine="top_gradient" type="button">Top fade</button>
+                    <div class="cap-fxbody hidden" id="cineTopFx">
+                      <div class="cap-sub"><label>Height <span class="cap-num"><input type="number" id="cineTopHNum" min="0" max="80" value="20" />%</span></label><input type="range" class="cap-range" id="cineTopH" min="0" max="80" value="20" /></div>
+                      <div class="cap-sub"><label>Strength <span class="cap-num"><input type="number" id="cineTopSNum" min="0" max="100" value="60" />%</span></label><input type="range" class="cap-range" id="cineTopS" min="0" max="100" value="60" /></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cap-grouphd"><span>Atmosphere</span></div>
+                <div class="cap-ctl">
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-cine="vignette" type="button">Vignette</button>
+                    <div class="cap-fxbody hidden" id="cineVigFx">
+                      <div class="cap-sub"><label>Strength <span class="cap-num"><input type="number" id="cineVigSNum" min="0" max="100" value="50" />%</span></label><input type="range" class="cap-range" id="cineVigS" min="0" max="100" value="50" /></div>
+                    </div>
+                  </div>
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-cine="glow" type="button">Glow</button>
+                    <div class="cap-fxbody hidden" id="cineGlowFx">
+                      <div class="cap-sub"><label>Strength <span class="cap-num"><input type="number" id="cineGlowSNum" min="0" max="100" value="50" />%</span></label><input type="range" class="cap-range" id="cineGlowS" min="0" max="100" value="50" /></div>
+                    </div>
+                  </div>
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-cine="grain" type="button">Film grain</button>
+                    <div class="cap-fxbody hidden" id="cineGrainFx">
+                      <div class="cap-sub"><label>Strength <span class="cap-num"><input type="number" id="cineGrainSNum" min="0" max="100" value="40" />%</span></label><input type="range" class="cap-range" id="cineGrainS" min="0" max="100" value="40" /></div>
+                      <div class="cap-upnote">Grain appears in the exported clip.</div>
+                    </div>
+                  </div>
+                  <div class="cap-fxrow">
+                    <button class="cap-tg cap-fxtoggle" data-cine="letterbox" type="button">Cinematic bars</button>
+                    <div class="cap-fxbody hidden" id="cineBarsFx">
+                      <div class="cap-sub"><label>Size <span class="cap-num"><input type="number" id="cineBarsNum" min="0" max="100" value="50" />%</span></label><input type="range" class="cap-range" id="cineBars" min="0" max="100" value="50" /></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="cs-foot">
+                <button type="button" class="cust-reset" id="cineReset">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Reset effects
+                </button>
+              </div>
+            </div>
+          </div>
+          </div><!-- /stabCustomize -->
+          </div><!-- /cap-studio -->
+
+          <button class="generate" id="generateBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
+            Generate Shorts
+          </button>
+          <div id="error" class="error hidden"></div>
+
+          <!-- Progress panel -->
+          <div id="progressPanel" class="progress-panel hidden">
+            <div class="steps" id="steps"></div>
+            <div class="bar-row">
+              <div class="bar-msg"><span class="spinner" id="barSpinner"></span><span id="barMsg">Starting…</span></div>
+              <div class="bar-pct" id="barPct">0%</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+          </div>
+        </div>
+
+        <div class="cfg-right">
+          <div class="phone" id="phone">
+            <div class="phone-screen empty" id="phoneScreen">
+              <div class="island"></div>
+              <div class="preview-pill"><span class="dot"></span>Preview</div>
+              <div class="ph-placeholder" id="phPlaceholder">Upload a video or paste a link to preview it here</div>
+              <div class="media-box" id="mediaBox">
+                <video id="previewVideo" class="hidden" muted loop autoplay playsinline></video>
+                <iframe id="previewEmbed" class="hidden" allow="autoplay; encrypted-media; picture-in-picture"
+                        allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+              </div>
+              <!-- Cinematic FX preview (under the captions, over the media) -->
+              <div class="cine-overlay" id="cineOverlay">
+                <div class="cine-bar cine-bar-top" id="cineBarTop"></div>
+                <div class="cine-bar cine-bar-bottom" id="cineBarBottom"></div>
+                <div class="cine-grad cine-grad-top" id="cineGradTop"></div>
+                <div class="cine-grad cine-grad-bottom" id="cineGradBottom"></div>
+                <div class="cine-vig" id="cineVig"></div>
+              </div>
+              <div class="frame-title hidden" id="phoneTitle">Title of vid</div>
+              <div class="cap-guides" id="capGuides"><i></i><i></i><i></i></div>
+              <div class="cap-preview pos-bottom hidden" id="capPreview"><span class="cap-line" id="capPreviewLine"></span></div>
+            </div>
+          </div>
+
+          <!-- Background download progress (URL source): fills while the user
+               adjusts settings so the file is ready by the time they Generate. -->
+          <div id="dlStatus" class="dlstatus hidden">
+            <div class="dlstatus-row">
+              <span class="dlstatus-msg"><span class="sdot"></span><span id="dlStatusText">Preparing…</span></span>
+              <span id="dlStatusPct" class="dlstatus-pct"></span>
+            </div>
+            <div class="dlstatus-track"><div id="dlStatusBar" class="dlstatus-bar"></div></div>
+            <button type="button" id="dlRetry" class="dlstatus-retry hidden">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/></svg>
+              Retry download
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultsHead" class="results-head hidden">
+    <h2>Your clips</h2>
+    <span id="resultsCount"></span>
+  </div>
+  <div class="results" id="results"></div>
+
+  <footer>ClipForge · local pipeline: yt-dlp → faster-whisper → ffmpeg</footer>
+</div>
+</main>
+
+<!-- Per-video clips "page": opened from the History panel -->
+<section id="clipsView" class="clips-view hidden">
+  <div class="cv-head">
+    <button class="cv-back" id="cvBack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back
+    </button>
+    <div class="cv-titlebox">
+      <div class="cv-eyebrow">Clips for</div>
+      <div class="cv-title" id="cvTitle">—</div>
+    </div>
+    <div class="cv-switch">
+      <label for="videoSwitcher">Change video</label>
+      <select id="videoSwitcher" class="dropdown"></select>
+    </div>
+  </div>
+  <div class="cv-body">
+    <div id="cvGrid" class="cv-grid"></div>
+    <div id="cvEmpty" class="cv-empty hidden">This video's clips are no longer on disk.</div>
+  </div>
+</section>
+
+<script>
+const STAGES = [
+  { key: "downloading", label: "Download" },
+  { key: "transcribing", label: "Transcribe" },
+  { key: "selecting", label: "Analyze" },
+  { key: "rendering", label: "Render" },
+];
+
+// Inline SVG icon set (no emojis — clean, consistent line icons).
+const ICONS = {
+  dots: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>`,
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+  link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
+  chevR: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>`,
+  warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+};
+
+const state = {
+  source: "url",
+  upload_id: null,
+  uploadObjectUrl: null,   // object URL for an uploaded file's <video> preview
+  embed: null,             // parsed {type, src} for a pasted link
+  previewError: false,
+  aspect: "9:16",
+  fit: "crop",
+  device: "auto",
+  language: "auto",     // caption transcription language (Whisper code or 'auto')
+  numClips: 3,
+  evtSource: null,
+  renderedCount: 0,
+  uploadName: null,       // original filename of an uploaded video (for history label)
+  history: [],            // cached /api/history entries (one per processed video)
+  currentVideo: null,     // clip_id of the video open in the clips view
+  prefetchId: null,       // id of the in-flight background URL download
+  prefetchUrl: null,      // the URL prefetch is for (guards against stale reuse)
+  downloadId: null,       // file id of a completed prefetch (reused on Generate)
+  pretranscribeId: null,  // id of the in-flight background transcription
+  pretranscribeSource: null, // source file id that pretranscribe is for
+  transcriptReady: false, // true once the background transcript is cached
+  captionStyle: "bold_white", // base server preset id (sent as caption_style)
+  activeStyleKey: "bold_white", // which gallery chip is highlighted (server id OR user_… id)
+  userPresets: [],        // user-saved caption styles (localStorage)
+  galleryFilter: "all",   // template gallery filter: all | trending | mine
+  captionOverrides: {},   // user tweaks layered over the preset (sent to /generate)
+  cinematic: {            // reel-style video effects (sent to /generate as `cinematic`)
+    color_grade: "none",
+    bottom_gradient: false, bottom_gradient_height: 25, bottom_gradient_strength: 70,
+    top_gradient: false, top_gradient_height: 20, top_gradient_strength: 60,
+    vignette: false, vignette_strength: 50,
+    glow: false, glow_strength: 50,
+    grain: false, grain_strength: 40,
+    letterbox: false, letterbox_size: 50,
+  },
+  presets: [],            // /api/caption-styles
+  fontsData: { bundled: [], multilingual: [], user: [] }, // /api/fonts
+  fontFiles: {},          // family -> filename (for @font-face)
+};
+
+// ---- Toggles ----
+function bindToggle(id, key, onChange) {
+  const root = document.getElementById(id);
+  root.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      root.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state[key] = btn.dataset.val;
+      if (onChange) onChange(btn.dataset.val);
+    });
+  });
+}
+bindToggle("aspect", "aspect", () => updatePreviewFrame());
+bindToggle("fit", "fit", val => {
+  // Square mode shows the title field and ignores the aspect ratio.
+  document.getElementById("barWrap").classList.toggle("hidden", val !== "square");
+  updatePreviewFrame();
+});
+
+// ---- File upload (drag/drop + click) ----
+const fileInput = document.getElementById("fileInput");
+const megabar = document.getElementById("megabar");
+
+function setUpStatus(cls, text) {
+  const s = document.getElementById("upStatus");
+  s.classList.remove("hidden");
+  s.className = "devstatus " + cls;
+  document.getElementById("upStatusText").textContent = text;
+}
+
+function uploadFile(file) {
+  if (!file) return;
+  state.upload_id = null;
+  state.source = "upload";            // a chosen file switches the source to upload
+  setPreviewVideo(file);              // instant local preview, before upload finishes
+  const urlIn = document.getElementById("url");
+  urlIn.value = file.name; urlIn.readOnly = true;
+  megabar.classList.add("hasfile");
+  document.getElementById("removeUpload").classList.remove("hidden");
+  setUpStatus("loading", `Uploading ${file.name}… 0%`);
+  updateContinueState();
+
+  const fd = new FormData();
+  fd.append("file", file);
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "/api/upload");
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round(e.loaded * 100 / e.total);
+      setUpStatus("loading", `Uploading ${file.name}… ${pct}%`);
+    }
+  };
+  xhr.onload = () => {
+    let d = {};
+    try { d = JSON.parse(xhr.responseText); } catch (e) {}
+    if (xhr.status === 200 && d.upload_id) {
+      state.upload_id = d.upload_id;
+      state.uploadName = d.filename || file.name;
+      setUpStatus("ready", `Ready: ${d.filename} — uploaded`);
+    } else {
+      setUpStatus("err", d.detail || "Upload failed. Try another file.");
+    }
+  };
+  xhr.onerror = () => setUpStatus("err", "Upload failed — network error.");
+  xhr.send(fd);
+}
+
+fileInput.addEventListener("change", () => uploadFile(fileInput.files[0]));
+document.getElementById("megaUpload").addEventListener("click", () => fileInput.click());
+["dragenter", "dragover"].forEach(ev => megabar.addEventListener(ev, (e) => {
+  e.preventDefault(); megabar.classList.add("dragover");
+}));
+["dragleave", "drop"].forEach(ev => megabar.addEventListener(ev, (e) => {
+  e.preventDefault(); megabar.classList.remove("dragover");
+}));
+megabar.addEventListener("drop", (e) => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) { fileInput.files = e.dataTransfer.files; uploadFile(f); }
+});
+// Top-nav History button opens the sidebar.
+document.getElementById("navHistory").addEventListener("click", () =>
+  document.body.classList.remove("sidebar-collapsed"));
+// ---- Compute dropdown + live device status ----
+const deviceSel = document.getElementById("device");
+deviceSel.addEventListener("change", () => {
+  state.device = deviceSel.value;
+  warmDevice(state.device);
+});
+
+// ---- Caption language ----
+const langSel = document.getElementById("capLang");
+langSel.addEventListener("change", () => {
+  state.language = langSel.value;
+  // Auto-swap to a script-capable font for non-Latin languages (Urdu/Hindi/…),
+  // so captions don't render as tofu boxes with a Latin-only default.
+  const def = LANG_DEFAULT_FONT[state.language];
+  if (def && state.fontFiles[def]) {
+    const sel = document.getElementById("capFont");
+    sel.value = def;
+    document.getElementById("capFontVal").textContent = def;
+    setCaptionOverride("font_family", def);   // also refreshes the preview
+  }
+  // Refresh the in-frame preview so it shows the new language's sample phrase
+  // (setCaptionOverride above only runs for the non-Latin auto-font case).
+  updateCaptionPreview();
+  // The cached background transcript was decoded in the previous language —
+  // re-prepare it in the new one so Generate stays instant (and correct).
+  if (state.pretranscribeSource) {
+    state.transcriptReady = false;
+    startPretranscribe(state.pretranscribeSource);
+  }
+});
+
+function setDeviceStatus(cls, text) {
+  document.getElementById("devStatus").className = "devstatus " + cls;
+  document.getElementById("devStatusText").textContent = text;
+}
+
+// Auto-detected GPU model name (e.g. "NVIDIA GeForce RTX 5060 Ti"), filled by
+// loadCompute() from /api/devices; null until detected / when no GPU.
+let GPU_NAME = null;
+const gpuLabel = () => GPU_NAME || "GPU";
+const DEV_LABELS = { auto: "Auto", cuda: "GPU", cpu: "CPU" };
+// Friendly label for a selected dropdown value (auto/cuda/cpu).
+const selLabel = (dev) => (dev === "cuda" ? gpuLabel() : (DEV_LABELS[dev] || dev));
+// Badge/status text for a concrete device the server resolved to.
+function deviceTagText(dev) {
+  const d = (dev || "").toLowerCase();
+  if (d === "cuda" || d === "gpu") return gpuLabel();
+  if (d === "cpu") return "CPU";
+  return (dev || "—").toUpperCase();
+}
+
+async function warmDevice(dev) {
+  setDeviceStatus("loading", `Loading Whisper on ${selLabel(dev)}…`);
+  try {
+    const res = await fetch("/api/warmup?device=" + encodeURIComponent(dev), { method: "POST" });
+    const d = await res.json();
+    if (d.status === "ready") {
+      const tag = deviceTagText(d.device || dev);
+      setDeviceStatus("ready", d.cached ? `${tag} ready — model already loaded` : `${tag} ready — model loaded`);
+      document.getElementById("deviceTag").textContent = tag;
+    } else {
+      setDeviceStatus("err", d.message || "Could not load the model on this device.");
+    }
+  } catch (e) {
+    setDeviceStatus("err", "Status check failed: " + e.message);
+  }
+}
+
+// ---- Clip counter ----
+const numInput = document.getElementById("numClips");
+function clampClips() {
+  let n = parseInt(numInput.value || "1", 10);
+  if (isNaN(n)) n = 1;
+  n = Math.max(1, Math.min(10, n));
+  numInput.value = n; state.numClips = n;
+}
+document.getElementById("minus").onclick = () => { numInput.value = (state.numClips - 1); clampClips(); };
+document.getElementById("plus").onclick = () => { numInput.value = (state.numClips + 1); clampClips(); };
+numInput.addEventListener("input", clampClips);
+
+// ---- Live phone preview (frame + media + title + captions) ----
+function setPreviewVideo(file) {
+  if (state.uploadObjectUrl) URL.revokeObjectURL(state.uploadObjectUrl);
+  state.uploadObjectUrl = URL.createObjectURL(file);
+  state.previewError = false;
+  updatePreviewFrame();
+}
+
+function clearPreviewVideo() {
+  if (state.uploadObjectUrl) { URL.revokeObjectURL(state.uploadObjectUrl); state.uploadObjectUrl = null; }
+  state.previewError = false;
+  updatePreviewFrame();
+}
+
+// Turn a pasted link into something embeddable in the frame.
+function parseVideoUrl(url) {
+  if (!url) return null;
+  url = url.trim();
+  let m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (m) {
+    const id = m[1];
+    return { type: "iframe", src:
+      `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&modestbranding=1&playsinline=1&rel=0` };
+  }
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) {
+    return { type: "iframe", src: `https://player.vimeo.com/video/${m[1]}?autoplay=1&muted=1&loop=1&background=1` };
+  }
+  if (/^https?:\/\/.+\.(mp4|webm|ogg|ogv|mov|m4v)(\?.*)?$/i.test(url)) {
+    return { type: "video", src: url };
+  }
+  if (/^https?:\/\//i.test(url)) return { type: "unknown", src: url };
+  return null;
+}
+
+function refreshUrlEmbed() {
+  state.embed = parseVideoUrl(document.getElementById("url").value);
+  state.previewError = false;   // give the new link a fresh chance to load
+  updatePreviewFrame();
+}
+
+// Decide what to show in the frame based on the active source.
+function activeMedia() {
+  if (state.source === "upload") {
+    if (state.uploadObjectUrl && !state.previewError) return { kind: "video", src: state.uploadObjectUrl };
+    return null;
+  }
+  // URL source: once the background download for THIS url has finished, show the
+  // real downloaded file in the frame instead of the embeddable player.
+  const url = (document.getElementById("url").value || "").trim();
+  const haveLocal = state.downloadId && state.prefetchUrl === url;
+  if (haveLocal && !state.previewError) {
+    return { kind: "video", src: `/api/download/${state.downloadId}/video` };
+  }
+  const e = state.embed;
+  if (!e) return haveLocal ? { kind: "unknown" } : null;
+  if (e.type === "iframe") return { kind: "iframe", src: e.src };
+  if (e.type === "video" && !state.previewError) return { kind: "video", src: e.src };
+  return { kind: "unknown" };
+}
+
+function updatePreviewFrame() {
+  const phone = document.getElementById("phone");
+  const screen = document.getElementById("phoneScreen");
+  const v = document.getElementById("previewVideo");
+  const ifr = document.getElementById("previewEmbed");
+  const ph = document.getElementById("phPlaceholder");
+  const title = document.getElementById("phoneTitle");
+
+  // Frame shape. Square mode keeps the 9:16 canvas but centers a rounded 1:1 box
+  // inside it and ignores the aspect ratio (its buttons are disabled to show that).
+  const square = state.fit === "square";
+  const wide = !square && state.aspect === "16:9";
+  screen.classList.toggle("square", square);
+  screen.classList.toggle("ar-16-9", wide);
+  phone.classList.toggle("wide", wide);
+  document.querySelectorAll('#aspect button').forEach(b => { b.disabled = square; });
+
+  // Bind whichever media element is active; hide/unload the others.
+  const media = activeMedia();
+  if (media && media.kind === "video") {
+    if (v.getAttribute("src") !== media.src) { v.src = media.src; v.load(); }
+    v.classList.remove("hidden");
+  } else {
+    v.classList.add("hidden");
+    if (v.getAttribute("src")) { v.removeAttribute("src"); v.load(); }
+  }
+  if (media && media.kind === "iframe") {
+    if (ifr.getAttribute("src") !== media.src) ifr.src = media.src;
+    ifr.classList.remove("hidden");
+  } else {
+    ifr.classList.add("hidden");
+    if (ifr.getAttribute("src")) ifr.removeAttribute("src");
+  }
+
+  const hasMedia = !!media && (media.kind === "video" || media.kind === "iframe");
+  ph.classList.toggle("hidden", hasMedia);
+  screen.classList.toggle("empty", !hasMedia);
+  if (!hasMedia) {
+    if (state.previewError) ph.textContent = "This format can't preview in the browser (it will still render)";
+    else if (media && media.kind === "unknown") ph.textContent = "Can't embed this link here — it will still download & render";
+    else ph.textContent = state.source === "upload"
+      ? "Upload a video to preview it here"
+      : "Paste a YouTube / Vimeo / direct video link to preview it here";
+  }
+
+  // Title overlay (square mode only — matches the burned render).
+  const showTitle = state.fit === "square";
+  title.classList.toggle("hidden", !showTitle);
+  if (showTitle) {
+    const t = (document.getElementById("barText").value || "").trim();
+    title.textContent = t || "Title of vid";
+    title.classList.toggle("placeholder", !t);
+  }
+
+  updateCaptionPreview();
+}
+
+// ---- Caption styles: presets + customizer + live in-frame preview ----
+// Preview phrase per caption language, so the in-frame preview reads in the
+// language the captions will actually be generated in — e.g. picking Hindi shows
+// "कैप्शन अब हिंदी में" instead of the English "Make it go viral". hl = the word
+// that highlights for the active-word/karaoke animations.
+const CAP_SAMPLES = {
+  en:       { words: ["Make", "it", "go", "viral"], hl: 3 },
+  hinglish: { words: ["Caption", "ab", "Hinglish", "mein"], hl: 2 },
+  hi:       { words: ["कैप्शन", "अब", "हिंदी", "में"], hl: 2 },
+  ur:       { words: ["کیپشن", "اب", "اردو", "میں"], hl: 2 },
+  ar:       { words: ["التعليقات", "الآن", "بالعربية"], hl: 2 },
+  fa:       { words: ["زیرنویس", "به", "فارسی"], hl: 2 },
+  pa:       { words: ["ਕੈਪਸ਼ਨ", "ਹੁਣ", "ਪੰਜਾਬੀ"], hl: 2 },
+  bn:       { words: ["ক্যাপশন", "এখন", "বাংলা"], hl: 2 },
+  es:       { words: ["Hazlo", "volverse", "viral"], hl: 2 },
+  fr:       { words: ["Rends-le", "viral"], hl: 1 },
+  de:       { words: ["Mach", "es", "viral"], hl: 2 },
+  pt:       { words: ["Torne-o", "viral"], hl: 1 },
+  ru:       { words: ["Сделай", "это", "вирусным"], hl: 2 },
+  tr:       { words: ["Onu", "viral", "yap"], hl: 1 },
+  id:       { words: ["Buat", "jadi", "viral"], hl: 2 },
+  ja:       { words: ["バズら", "せよう"], hl: 1 },
+  ko:       { words: ["떡상", "가자"], hl: 0 },
+  zh:       { words: ["让它", "爆红"], hl: 1 },
+};
+const CAP_SAMPLE = CAP_SAMPLES.en.words;   // default fallback (used by styleCaptionEl)
+const CAP_HL = CAP_SAMPLES.en.hl;
+
+// The preview phrase for the currently-selected caption language.
+function captionSample() { return CAP_SAMPLES[state.language] || CAP_SAMPLES.en; }
+
+function presetById(id) { return state.presets.find(p => p.id === id) || state.presets[0] || {}; }
+function effectiveCaptionCfg() { return Object.assign({}, presetById(state.captionStyle), state.captionOverrides); }
+
+function setCaptionOverride(key, val) { state.captionOverrides[key] = val; updateCaptionPreview(); }
+
+// True/false for an emphasis toggle, honouring the override → preset fallback.
+function captionToggleOn(cfg, key) {
+  if (key === "shadow_enabled") {
+    return state.captionOverrides.shadow_enabled !== undefined
+      ? !!state.captionOverrides.shadow_enabled
+      : (presetById(state.captionStyle).shadow || 0) > 0;
+  }
+  return !!cfg[key];
+}
+
+// All known fonts across groups (used to register @font-face for previews).
+function allFonts() {
+  return [
+    ...(state.fontsData.user || []),
+    ...(state.fontsData.multilingual || []),
+    ...(state.fontsData.bundled || []),
+  ];
+}
+
+// A sensible default caption font per non-Latin language, so picking the
+// language auto-swaps to a typeface that can actually render the script.
+const LANG_DEFAULT_FONT = {
+  ur: "Noto Nastaliq Urdu",
+  fa: "Noto Naskh Arabic",
+  ar: "Noto Sans Arabic",
+  hi: "Noto Sans Devanagari",
+  mr: "Noto Sans Devanagari",
+  ne: "Noto Sans Devanagari",
+  bn: "Noto Sans Devanagari",
+  pa: "Noto Sans Devanagari",
+};
+
+function injectFontFaces(list) {
+  let css = "";
+  (list || []).forEach(f => {
+    state.fontFiles[f.family] = f.file;
+    css += `@font-face{font-family:'${f.family}';src:url('/fonts/${encodeURIComponent(f.file)}');font-display:swap;}\n`;
+  });
+  let el = document.getElementById("capFontFaces");
+  if (!el) { el = document.createElement("style"); el.id = "capFontFaces"; document.head.appendChild(el); }
+  el.textContent = css;
+}
+
+// Multi-shadow text outline approximating the burned libass outline.
+function outlineShadow(px, color) {
+  if (!px || px < 0.4) return "";
+  const o = [];
+  for (let a = 0; a < 360; a += 45) {
+    const x = (Math.cos(a * Math.PI / 180) * px).toFixed(1);
+    const y = (Math.sin(a * Math.PI / 180) * px).toFixed(1);
+    o.push(`${x}px ${y}px 0 ${color}`);
+  }
+  return o.join(",");
+}
+
+function hexToRgba(hex, a) {
+  hex = (hex || "#000000").replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  const r = parseInt(hex.slice(0, 2), 16) || 0, g = parseInt(hex.slice(2, 4), 16) || 0, b = parseInt(hex.slice(4, 6), 16) || 0;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ---- Advanced colour picker (SV area + hue + hex + premium presets) ----
+const CP_PRESETS = ["#FFFFFF", "#000000", "#FFD400", "#FFC400", "#FF9F0A", "#FF3B30", "#FF2D55", "#FF4FD8",
+                    "#AF52DE", "#7C4DFF", "#5E5CE6", "#0A84FF", "#22D3EE", "#30D158", "#27E36B", "#E5E5EA"];
+let cpState = null;
+const clamp01 = v => Math.max(0, Math.min(1, v));
+
+function hexToRgbArr(hex) {
+  hex = (hex || "#000000").replace("#", ""); if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  return [parseInt(hex.slice(0, 2), 16) || 0, parseInt(hex.slice(2, 4), 16) || 0, parseInt(hex.slice(4, 6), 16) || 0];
+}
+function rgbToHex(r, g, b) { return "#" + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase(); }
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0;
+  if (d) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+  return [h, mx ? d / mx : 0, mx];
+}
+function hsvToHex(h, s, v) {
+  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c; let r, g, b;
+  if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0]; else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c]; else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
+  return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+}
+function hexToHsv(hex) { const [r, g, b] = hexToRgbArr(hex); return rgbToHsv(r, g, b); }
+
+function paintColorTriggers() {
+  const cfg = effectiveCaptionCfg();
+  document.querySelectorAll(".cp-trigger").forEach(t => { t.style.background = cfg[t.dataset.cp] || t.dataset.def || "#000000"; });
+}
+
+function renderCp(skipHex) {
+  if (!cpState) return;
+  const { h, s, v } = cpState;
+  document.getElementById("cpArea").style.background =
+    `linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,rgba(255,255,255,0)),hsl(${Math.round(h)},100%,50%)`;
+  const cur = document.getElementById("cpCursor");
+  cur.style.left = (s * 100) + "%"; cur.style.top = ((1 - v) * 100) + "%"; cur.style.background = hsvToHex(h, s, v);
+  document.getElementById("cpHueThumb").style.left = (h / 360 * 100) + "%";
+  if (!skipHex) document.getElementById("cpHex").value = hsvToHex(h, s, v);
+}
+function applyCp() {
+  if (!cpState) return;
+  state.captionOverrides[cpState.key] = hsvToHex(cpState.h, cpState.s, cpState.v);
+  cpState.trigger.style.background = state.captionOverrides[cpState.key];
+  updateCaptionPreview();
+}
+function setCpHex(hex, skipHex) { const [h, s, v] = hexToHsv(hex); cpState.h = h; cpState.s = s; cpState.v = v; renderCp(skipHex); applyCp(); }
+function openColorPicker(trigger) {
+  const key = trigger.dataset.cp;
+  const cur = effectiveCaptionCfg()[key] || trigger.dataset.def || "#FFFFFF";
+  const [h, s, v] = hexToHsv(cur);
+  cpState = { key, h, s, v, trigger };
+  renderCp();
+  const pop = document.getElementById("cpPop");
+  pop.classList.add("open");
+  const r = trigger.getBoundingClientRect();
+  const pw = pop.offsetWidth || 236, ph = pop.offsetHeight || 300;
+  let left = r.left, top = r.bottom + 8;
+  if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 8);
+  pop.style.left = Math.max(8, left) + "px"; pop.style.top = top + "px";
+}
+function closeColorPicker() { document.getElementById("cpPop").classList.remove("open"); cpState = null; }
+
+function dragXY(el, cb) {
+  let on = false;
+  const at = (e) => { const r = el.getBoundingClientRect(); const p = e.touches ? e.touches[0] : e; cb(clamp01((p.clientX - r.left) / r.width), clamp01((p.clientY - r.top) / r.height)); };
+  const mv = (e) => { if (on) at(e); };
+  const up = () => { on = false; document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
+  el.addEventListener("mousedown", (e) => { on = true; if (e.cancelable) e.preventDefault(); at(e); document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up); });
+  el.addEventListener("touchstart", (e) => { on = true; at(e); }, { passive: true });
+  el.addEventListener("touchmove", (e) => { if (on) at(e); }, { passive: true });
+  el.addEventListener("touchend", () => { on = false; });
+}
+
+function initColorPicker() {
+  const pr = document.getElementById("cpPresets");
+  pr.innerHTML = CP_PRESETS.map(c => `<button type="button" class="cp-sw" data-c="${c}" style="background:${c}"></button>`).join("");
+  pr.querySelectorAll(".cp-sw").forEach(b => b.addEventListener("click", () => { if (cpState) setCpHex(b.dataset.c); }));
+  document.querySelectorAll(".cp-trigger").forEach(t => t.addEventListener("click", (e) => { e.stopPropagation(); openColorPicker(t); }));
+  dragXY(document.getElementById("cpArea"), (px, py) => { if (!cpState) return; cpState.s = px; cpState.v = 1 - py; renderCp(); applyCp(); });
+  dragXY(document.getElementById("cpHue"), (px) => { if (!cpState) return; cpState.h = px * 360; renderCp(); applyCp(); });
+  document.getElementById("cpHex").addEventListener("input", (e) => {
+    let v = e.target.value.trim(); if (!v.startsWith("#")) v = "#" + v;
+    if (/^#[0-9a-fA-F]{6}$/.test(v) && cpState) setCpHex(v, true);
+  });
+  document.addEventListener("mousedown", (e) => {
+    const pop = document.getElementById("cpPop");
+    if (pop.classList.contains("open") && !pop.contains(e.target) && !(e.target.classList && e.target.classList.contains("cp-trigger"))) closeColorPicker();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeColorPicker(); });
+}
+
+// ---- Live animation in the preview (demonstrates the selected animation) ----
+let capAnimTimer = null;
+function stopCaptionAnim() { if (capAnimTimer) { clearInterval(capAnimTimer); capAnimTimer = null; } }
+function startCaptionAnim() {
+  stopCaptionAnim();
+  const cfg = effectiveCaptionCfg();
+  const anim = cfg.karaoke ? "karaoke" : (cfg.animation || "none");
+  if (anim === "none") return;
+  const words = [...document.querySelectorAll("#capPreviewLine span")];
+  if (!words.length) return;
+  const base = cfg.primary_color || "#FFFFFF", hi = cfg.highlight_color || "#FFD400";
+  words.forEach(w => { w.style.transition = "color .18s, opacity .25s var(--ease), transform .25s var(--ease)"; });
+  const n = words.length;
+  let i = 0;
+  const frame = () => {
+    if (anim === "highlight") words.forEach((w, k) => w.style.color = k === i ? hi : base);
+    else if (anim === "karaoke") words.forEach((w, k) => w.style.color = k <= i ? hi : base);
+    else if (anim === "one_word") words.forEach((w, k) => w.style.display = k === i ? "" : "none");
+    else if (anim === "word_reveal") words.forEach((w, k) => { const on = k <= i; w.style.opacity = on ? "1" : "0"; w.style.transform = on ? "scale(1)" : "scale(.7)"; });
+    i = (i + 1) % n;
+  };
+  frame();
+  capAnimTimer = setInterval(frame, anim === "one_word" ? 620 : 520);
+}
+
+// Style one element (a chip sample or the in-frame line) to look like `cfg`.
+function styleCaptionEl(el, cfg, opts) {
+  opts = opts || {};
+  const scale = opts.scale || 1;
+  const words = opts.words || CAP_SAMPLE;
+  const hlIndex = opts.hlIndex != null ? opts.hlIndex : -1;
+  const showHl = (cfg.animation === "highlight" || cfg.karaoke) && hlIndex >= 0;
+  const upper = !!cfg.uppercase;
+  el.innerHTML = words.map((w, i) => {
+    const c = (showHl && i === hlIndex) ? cfg.highlight_color : cfg.primary_color;
+    return `<span style="color:${c || "#fff"}">${escapeHtml(upper ? w.toUpperCase() : w)}</span>`;
+  }).join(" ");
+  el.style.fontFamily = `'${(cfg.font_family || "Roboto").replace(/'/g, "")}', sans-serif`;
+  el.style.fontWeight = cfg.bold ? "800" : "600";
+  el.style.color = cfg.primary_color || "#fff";
+  el.style.letterSpacing = ((cfg.tracking || 0) * scale).toFixed(1) + "px";
+  el.style.textDecoration = ((cfg.underline ? "underline " : "") + (cfg.strikethrough ? "line-through" : "")).trim() || "none";
+  // ASS \frz is CCW-positive; CSS rotate is CW-positive → negate to match the render.
+  el.style.transform = cfg.rotation ? `rotate(${-cfg.rotation}deg)` : "";
+  if (opts.fontPx) el.style.fontSize = opts.fontPx.toFixed(1) + "px";
+  const outlinePx = ((cfg.outline_width != null ? cfg.outline_width : cfg.outline) || 0) * scale;
+  const box = !!cfg.background_enabled;
+  const shadows = [];
+  if (!box) { const o = outlineShadow(outlinePx, cfg.outline_color || "#000"); if (o) shadows.push(o); }
+  if (captionToggleOn(cfg, "glow_enabled")) {
+    const g = (cfg.glow_intensity != null ? cfg.glow_intensity : 10) * scale;
+    const gc = cfg.glow_color || "#7C4DFF";
+    shadows.push(`0 0 ${g.toFixed(1)}px ${gc}`, `0 0 ${(g * 2).toFixed(1)}px ${gc}`);
+  }
+  if (captionToggleOn(cfg, "shadow_enabled")) {
+    const d = (cfg.shadow_distance != null ? cfg.shadow_distance : (cfg.shadow || 6)) * scale;
+    const op = (cfg.shadow_opacity != null ? cfg.shadow_opacity : 75) / 100;
+    shadows.push(`${d.toFixed(1)}px ${d.toFixed(1)}px ${(d * 0.6).toFixed(1)}px ${hexToRgba(cfg.shadow_color || "#000", op)}`);
+  }
+  if (box) {
+    const bop = (cfg.background_opacity != null ? cfg.background_opacity : 100) / 100;
+    el.style.background = hexToRgba(cfg.background_color || "#000", bop);
+    el.style.padding = ".12em .34em";
+    el.style.borderRadius = ((cfg.background_radius != null ? cfg.background_radius : 10) * scale).toFixed(1) + "px";
+  } else {
+    el.style.background = "none"; el.style.padding = "0"; el.style.borderRadius = "0";
+  }
+  el.style.textShadow = shadows.length ? shadows.join(",") : "none";
+}
+
+// ---- Caption preset gallery (server presets + user-saved custom styles) ----
+const USER_PRESETS_LS = "clipforge_caption_presets_v1";
+
+function loadUserPresets() {
+  try { state.userPresets = JSON.parse(localStorage.getItem(USER_PRESETS_LS)) || []; }
+  catch (e) { state.userPresets = []; }
+}
+function persistUserPresets() {
+  try { localStorage.setItem(USER_PRESETS_LS, JSON.stringify(state.userPresets)); } catch (e) { /* quota — non-fatal */ }
+}
+
+// Full caption config for a saved style = its base preset with the saved tweaks layered on.
+function cfgForUserPreset(up) {
+  return Object.assign({}, presetById(up.base), up.overrides || {});
+}
+
+function buildChip({ key, label, cfg, trending, custom }) {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "cap-chip" + (key === state.activeStyleKey ? " active" : "");
+  chip.dataset.key = key;
+  const badge = custom ? '<span class="cap-trend is-custom">Custom</span>'
+              : trending ? '<span class="cap-trend">Trending</span>' : "";
+  // A <span> (not <button>) so it can legally live inside the chip's <button>.
+  const del = custom
+    ? '<span class="cap-del" role="button" title="Delete this style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>'
+    : "";
+  chip.innerHTML = del + badge +
+    `<span class="cap-stage"><span class="cap-sample"></span></span>` +
+    `<span class="cap-name">${escapeHtml(label)}</span>`;
+  // Show the style's own NAME rendered in that style (AutoCaption-like tiles).
+  const words = (label || "Aa").split(/\s+/).slice(0, 3);
+  styleCaptionEl(chip.querySelector(".cap-sample"), cfg, { fontPx: 20, scale: 0.2, words, hlIndex: words.length - 1 });
+  return chip;
+}
+
+function groupLabel(text) {
+  const el = document.createElement("div");
+  el.className = "cap-group-label";
+  el.innerHTML = `<span>${escapeHtml(text)}</span>`;
+  return el;
+}
+
+function renderPresetChips() {
+  const root = document.getElementById("capPresets");
+  root.innerHTML = "";
+  const f = state.galleryFilter || "all";
+  const showMine = (f === "all" || f === "mine");
+  const showTrend = (f === "all" || f === "trending");
+  const showStd = (f === "all");
+
+  // 1) The user's own saved styles, first (mirrors the fonts ordering they liked).
+  if (showMine && state.userPresets.length) {
+    if (f === "all") root.appendChild(groupLabel("My styles"));
+    state.userPresets.forEach(up => {
+      const chip = buildChip({ key: up.id, label: up.label, cfg: cfgForUserPreset(up), custom: true });
+      chip.addEventListener("click", e => { if (e.target.closest(".cap-del")) return; selectUserPreset(up); });
+      chip.querySelector(".cap-del").addEventListener("click", () => removeUserPreset(up.id));
+      root.appendChild(chip);
+    });
+  }
+  if (f === "mine" && !state.userPresets.length) {
+    const empty = document.createElement("div");
+    empty.className = "gallery-empty";
+    empty.textContent = "No saved styles yet — tune a look and hit “Save current”.";
+    root.appendChild(empty);
+  }
+
+  // 2) Built-in presets, split into Trending and Standard.
+  const trending = state.presets.filter(p => p.trending);
+  const standard = state.presets.filter(p => !p.trending);
+  const addServer = (title, list, show) => {
+    if (!show || !list.length) return;
+    if (f === "all") root.appendChild(groupLabel(title));
+    list.forEach(p => {
+      const chip = buildChip({ key: p.id, label: p.label, cfg: p, trending: p.trending });
+      chip.addEventListener("click", () => selectPreset(p.id));
+      root.appendChild(chip);
+    });
+  };
+  addServer("Trending", trending, showTrend);
+  addServer("Standard", standard, showStd);
+}
+
+// Highlight the active chip across every group without a full re-render.
+function markActiveChips() {
+  document.querySelectorAll("#capPresets .cap-chip").forEach(c =>
+    c.classList.toggle("active", c.dataset.key === state.activeStyleKey));
+}
+
+// Keep a script-capable font for non-Latin languages when starting from a preset.
+function applyLanguageFont() {
+  const def = LANG_DEFAULT_FONT[state.language];
+  if (def && state.fontFiles[def]) state.captionOverrides.font_family = def;
+}
+
+function selectPreset(id) {
+  state.captionStyle = id;
+  state.activeStyleKey = id;
+  state.captionOverrides = {};   // start clean from the preset; tweaks become overrides
+  applyLanguageFont();
+  markActiveChips();
+  syncCustomizerToPreset();
+  updateCaptionPreview();
+}
+
+function selectUserPreset(up) {
+  state.captionStyle = up.base;          // server base (sent as caption_style)
+  state.activeStyleKey = up.id;
+  state.captionOverrides = JSON.parse(JSON.stringify(up.overrides || {}));  // its tweaks
+  markActiveChips();
+  syncCustomizerToPreset();
+  updateCaptionPreview();
+}
+
+function removeUserPreset(id) {
+  state.userPresets = state.userPresets.filter(p => p.id !== id);
+  persistUserPresets();
+  if (state.activeStyleKey === id) state.activeStyleKey = state.captionStyle;  // fall back to its base
+  renderPresetChips();
+}
+
+// Save the current look (base preset + live tweaks) as a reusable custom style.
+function saveCurrentPreset(name) {
+  const label = (name || "").trim();
+  if (!label) return false;
+  const up = {
+    id: "user_" + Date.now().toString(36),
+    label,
+    base: state.captionStyle,
+    overrides: JSON.parse(JSON.stringify(state.captionOverrides)),
+  };
+  state.userPresets.unshift(up);
+  persistUserPresets();
+  state.activeStyleKey = up.id;
+  renderPresetChips();
+  return true;
+}
+
+function populateFontSelect() {
+  const sel = document.getElementById("capFont");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  const add = (label, fams) => {
+    if (!fams.length) return;
+    const og = document.createElement("optgroup"); og.label = label;
+    fams.forEach(f => { const o = document.createElement("option"); o.value = f.family; o.textContent = f.family; og.appendChild(o); });
+    sel.appendChild(og);
+  };
+  // Imported (uploaded) fonts first so the user's own fonts sit at the top,
+  // then the Urdu/Hindi set, then the trending Latin display fonts.
+  add("Your fonts", state.fontsData.user || []);
+  add("Urdu / Hindi", state.fontsData.multilingual || []);
+  add("Trending", state.fontsData.bundled || []);
+  if (prev) sel.value = prev;
+}
+
+// Reflect the active preset (+ any overrides) back into the customizer widgets.
+function syncCustomizerToPreset() {
+  const cfg = effectiveCaptionCfg();
+  const $ = id => document.getElementById(id);
+  $("capFont").value = cfg.font_family || "Roboto";
+  $("capFontVal").textContent = cfg.font_family || "Roboto";
+  $("capAnim").value = cfg.karaoke ? "karaoke" : (cfg.animation || "none");
+  const fs = cfg.font_scale || 1; $("capSize").value = fs; setNum("capSizeNum", Math.round(fs * 100));
+  const tr = cfg.tracking || 0; $("capTracking").value = tr; setNum("capTrackingNum", Math.round(tr));
+  const ow = cfg.outline_width != null ? cfg.outline_width : (cfg.outline || 0);
+  $("capOutline").value = ow; setNum("capOutlineNum", Math.round(ow));
+  document.querySelectorAll("#capCustBody .cap-tg").forEach(b => b.classList.toggle("active", captionToggleOn(cfg, b.dataset.k)));
+  // Effect panels: sliders (colours are painted onto the picker triggers).
+  const bo = cfg.background_opacity != null ? cfg.background_opacity : 100; $("capBoxOpacity").value = bo; setNum("capBoxOpacityNum", Math.round(bo));
+  const br = cfg.background_radius != null ? cfg.background_radius : 10; $("capBoxRadius").value = br; setNum("capBoxRadiusNum", Math.round(br));
+  const sd = cfg.shadow_distance != null ? cfg.shadow_distance : (cfg.shadow || 6); $("capShadowDist").value = sd; setNum("capShadowDistNum", Math.round(sd));
+  const so = cfg.shadow_opacity != null ? cfg.shadow_opacity : 75; $("capShadowOpacity").value = so; setNum("capShadowOpacityNum", Math.round(so));
+  const gi = cfg.glow_intensity != null ? cfg.glow_intensity : 10; $("capGlow").value = gi; setNum("capGlowNum", Math.round(gi));
+  updateFxPanels();
+  paintColorTriggers();
+}
+
+// The clip region inside the 19.5:9 device screen (matches the burned canvas).
+// pos_x/pos_y overrides are % within THIS region, so preview == render.
+function clipRegion() {
+  if (state.fit !== "square" && state.aspect === "16:9") return { top: 37, height: 26 };
+  return { top: 8.97, height: 82.05 };
+}
+
+function updateCaptionPreview() {
+  const prev = document.getElementById("capPreview");
+  if (!prev) return;
+  const cfg = effectiveCaptionCfg();
+  if (!cfg || !state.presets.length) { prev.classList.add("hidden"); stopCaptionAnim(); return; }
+  const dragging = prev.classList.contains("dragging") ? " dragging" : "";
+  if (cfg.pos_x != null && cfg.pos_y != null) {
+    const reg = clipRegion();
+    prev.className = "cap-preview free" + dragging;
+    prev.style.left = cfg.pos_x + "%";
+    prev.style.top = (reg.top + (cfg.pos_y / 100) * reg.height) + "%";
+    prev.style.bottom = "auto";
+  } else {
+    prev.className = "cap-preview pos-" + (cfg.position || "bottom") + dragging;
+    prev.style.left = ""; prev.style.top = ""; prev.style.bottom = "";
+  }
+  const screen = document.getElementById("phoneScreen");
+  const scale = (screen ? screen.clientWidth : 200) / 1080;
+  const fontPx = Math.max(9, (cfg.font_size || 90) * (cfg.font_scale || 1) * scale);
+  const samp = captionSample();
+  styleCaptionEl(document.getElementById("capPreviewLine"), cfg, { fontPx, scale, words: samp.words, hlIndex: samp.hl });
+  syncPosControls();
+  updateFxPanels();
+  paintRanges();
+  paintColorTriggers();
+  startCaptionAnim();
+}
+
+// Show the Box / Drop shadow / Glow control panels only when their toggle is on.
+function updateFxPanels() {
+  const cfg = effectiveCaptionCfg();
+  const t = (id, k) => { const el = document.getElementById(id); if (el) el.classList.toggle("hidden", !captionToggleOn(cfg, k)); };
+  t("capBoxFx", "background_enabled");
+  t("capShadowFx", "shadow_enabled");
+  t("capGlowFx", "glow_enabled");
+}
+
+// Maps each effect property to its control, so enabling an effect can seed the
+// override from the control's current value (keeps the export == the preview).
+const FX_CONTROL = {
+  background_color: ["capBoxColor", v => v],
+  background_opacity: ["capBoxOpacity", parseFloat],
+  background_radius: ["capBoxRadius", parseFloat],
+  shadow_color: ["capShadowColor", v => v],
+  shadow_distance: ["capShadowDist", parseFloat],
+  shadow_opacity: ["capShadowOpacity", parseFloat],
+  glow_color: ["capGlowColor", v => v],
+  glow_intensity: ["capGlow", parseFloat],
+};
+function seedFx(keys) {
+  keys.forEach(k => {
+    if (state.captionOverrides[k] == null) {
+      const [id, conv] = FX_CONTROL[k];
+      const el = document.getElementById(id);
+      if (el) state.captionOverrides[k] = conv(el.value);
+    }
+  });
+}
+
+// Fill the caption sliders up to the thumb with the accent colour.
+function paintRanges() {
+  document.querySelectorAll(".cap-range").forEach(el => {
+    const min = parseFloat(el.min || 0), max = parseFloat(el.max || 100), v = parseFloat(el.value || 0);
+    const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
+    el.style.background = `linear-gradient(90deg, var(--accent) ${pct}%, var(--surface-3) ${pct}%)`;
+  });
+}
+
+// Set an editable value badge — but not while the user is typing in it.
+function setNum(id, v) { const el = document.getElementById(id); if (el && el !== document.activeElement) el.value = v; }
+
+// Two-way bind an editable number badge: typing applies (clamped) live, blur normalises.
+function bindNum(numId, min, max, apply) {
+  const el = document.getElementById(numId);
+  if (!el) return;
+  el.addEventListener("input", () => { const n = parseFloat(el.value); if (!isNaN(n)) apply(Math.max(min, Math.min(max, n))); });
+  el.addEventListener("change", () => { let n = parseFloat(el.value); if (isNaN(n)) n = min; n = Math.max(min, Math.min(max, n)); el.value = n; apply(n); });
+}
+
+// Current effective X/Y placement (% within the clip region), falling back to the
+// position preset's default when free-placement isn't set yet.
+function effectivePosXY() {
+  const cfg = effectiveCaptionCfg();
+  const yDef = { top: 12, center: 50, bottom: 88 }[cfg.position] != null ? { top: 12, center: 50, bottom: 88 }[cfg.position] : 88;
+  return { x: cfg.pos_x != null ? cfg.pos_x : 50, y: cfg.pos_y != null ? cfg.pos_y : yDef };
+}
+
+// Reflect placement/rotation back into the X/Y/rotation sliders.
+function syncPosControls() {
+  const cfg = effectiveCaptionCfg();
+  const xy = effectivePosXY();
+  const sx = document.getElementById("capPosX"); if (!sx) return;
+  sx.value = xy.x; setNum("capPosXNum", Math.round(xy.x));
+  document.getElementById("capPosY").value = xy.y; setNum("capPosYNum", Math.round(xy.y));
+  const r = cfg.rotation || 0;
+  document.getElementById("capRotation").value = r; setNum("capRotationNum", r);
+}
+
+// Drag the caption in the preview to place it freely, with a magnetic snap near
+// the top / centre / bottom defaults (and horizontal centre).
+function initCaptionDrag() {
+  const line = document.getElementById("capPreviewLine");
+  const prev = document.getElementById("capPreview");
+  const guides = document.getElementById("capGuides");
+  const screen = document.getElementById("phoneScreen");
+  if (!line || !prev || !screen) return;
+  let dragging = false;
+  const snap = (v, targets, th) => { for (const t of targets) if (Math.abs(v - t) < th) return t; return v; };
+  const showGuides = () => {
+    const reg = clipRegion();
+    const gi = guides.querySelectorAll("i");
+    [12, 50, 88].forEach((p, i) => { if (gi[i]) gi[i].style.top = (reg.top + p / 100 * reg.height) + "%"; });
+    guides.classList.add("on");
+  };
+  const move = (e) => {
+    if (!dragging) return;
+    const r = screen.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    const reg = clipRegion();
+    let posX = ((p.clientX - r.left) / r.width) * 100;
+    let posY = (((p.clientY - r.top) / r.height) * 100 - reg.top) / reg.height * 100;
+    posX = Math.max(4, Math.min(96, posX));
+    posY = Math.max(2, Math.min(98, posY));
+    posX = snap(posX, [50], 4.5);           // magnetic: horizontal centre
+    posY = snap(posY, [12, 50, 88], 5.5);   // magnetic: top / centre / bottom
+    state.captionOverrides.pos_x = Math.round(posX * 10) / 10;
+    state.captionOverrides.pos_y = Math.round(posY * 10) / 10;
+    updateCaptionPreview();
+  };
+  const stop = () => {
+    if (!dragging) return;
+    dragging = false; prev.classList.remove("dragging"); guides.classList.remove("on");
+    document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", stop);
+  };
+  const start = (e) => {
+    dragging = true; prev.classList.add("dragging"); showGuides();
+    if (e.cancelable) e.preventDefault();
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", stop);
+    move(e);
+  };
+  line.addEventListener("mousedown", start);
+  line.addEventListener("touchstart", (e) => { dragging = true; prev.classList.add("dragging"); showGuides(); move(e); }, { passive: true });
+  line.addEventListener("touchmove", move, { passive: true });
+  line.addEventListener("touchend", stop);
+}
+
+async function loadFonts() {
+  try {
+    state.fontsData = await fetch("/api/fonts").then(r => r.json());
+    injectFontFaces(allFonts());
+    populateFontSelect();
+  } catch (e) { /* fonts are best-effort */ }
+}
+
+async function loadCaptionData() {
+  try {
+    const [ps, fs] = await Promise.all([
+      fetch("/api/caption-styles").then(r => r.json()),
+      fetch("/api/fonts").then(r => r.json()),
+    ]);
+    state.presets = ps || [];
+    state.fontsData = fs || { bundled: [], multilingual: [], user: [] };
+    injectFontFaces(allFonts());
+    populateFontSelect();
+    loadUserPresets();
+    renderPresetChips();
+    syncCustomizerToPreset();
+    updateCaptionPreview();
+  } catch (e) { /* captions still default server-side */ }
+}
+
+async function uploadCaptionFont(file) {
+  if (!file) return;
+  const note = document.getElementById("capFontNote");
+  note.className = "cap-upnote"; note.textContent = `Uploading ${file.name}…`;
+  try {
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch("/api/fonts/upload", { method: "POST", body: fd });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.detail || "Upload failed.");
+    await loadFonts();
+    document.getElementById("capFont").value = d.family;
+    document.getElementById("capFontVal").textContent = d.family;
+    setCaptionOverride("font_family", d.family);
+    note.textContent = `Added “${d.family}”.`;
+  } catch (e) {
+    note.className = "cap-upnote err"; note.textContent = e.message;
+  }
+}
+
+// ---- Cinematic effects (footage FX under the captions) ----
+// CSS approximation of each colour grade for the live preview (render uses ffmpeg).
+const CINE_GRADE_CSS = {
+  none: "",
+  warm: "saturate(1.1) sepia(.18) hue-rotate(-8deg) brightness(1.02)",
+  cool: "saturate(1.05) hue-rotate(12deg) contrast(1.03)",
+  teal_orange: "saturate(1.18) contrast(1.06) sepia(.12) hue-rotate(-6deg)",
+  vintage: "sepia(.35) saturate(.85) contrast(.95) brightness(1.03)",
+  vibrant: "saturate(1.4) contrast(1.08) brightness(1.01)",
+  bw: "grayscale(1) contrast(1.1)",
+};
+
+// True if any cinematic effect is active (so we only send/preview when needed).
+function cineActive() {
+  const c = state.cinematic;
+  return (c.color_grade && c.color_grade !== "none") || c.bottom_gradient || c.top_gradient
+      || c.vignette || c.glow || c.grain || c.letterbox;
+}
+
+function updateCinePreview() {
+  const c = state.cinematic;
+  const show = (el, on) => { if (el) el.style.display = on ? "block" : "none"; };
+  const gb = document.getElementById("cineGradBottom");
+  const gt = document.getElementById("cineGradTop");
+  const vg = document.getElementById("cineVig");
+  const bt = document.getElementById("cineBarTop"), bb = document.getElementById("cineBarBottom");
+
+  // Bottom / top dark gradients.
+  show(gb, c.bottom_gradient);
+  if (c.bottom_gradient) {
+    const m = (c.bottom_gradient_strength || 0) / 100, h = c.bottom_gradient_height || 25;
+    gb.style.height = Math.max(h, 1) + "%";
+    gb.style.background = `linear-gradient(to top, rgba(0,0,0,${m.toFixed(3)}) 0%, rgba(0,0,0,0) 100%)`;
+  }
+  show(gt, c.top_gradient);
+  if (c.top_gradient) {
+    const m = (c.top_gradient_strength || 0) / 100, h = c.top_gradient_height || 20;
+    gt.style.height = Math.max(h, 1) + "%";
+    gt.style.background = `linear-gradient(to bottom, rgba(0,0,0,${m.toFixed(3)}) 0%, rgba(0,0,0,0) 100%)`;
+  }
+  // Vignette.
+  show(vg, c.vignette);
+  if (c.vignette) {
+    const v = (c.vignette_strength || 0) / 100 * 0.9;
+    vg.style.background = `radial-gradient(ellipse 75% 75% at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,${v.toFixed(3)}) 115%)`;
+  }
+  // Letterbox bars.
+  show(bt, c.letterbox); show(bb, c.letterbox);
+  if (c.letterbox) {
+    const sz = 5 + (c.letterbox_size || 50) / 100 * 9;  // 5%..14% (matches the render map)
+    bt.style.height = sz + "%"; bb.style.height = sz + "%";
+  }
+  // Colour grade + glow → CSS filter on the media itself.
+  const mediaBox = document.getElementById("mediaBox");
+  if (mediaBox) {
+    let f = CINE_GRADE_CSS[c.color_grade] || "";
+    if (c.glow) { const g = 1 + (c.glow_strength || 0) / 100 * 0.12; f += ` brightness(${g.toFixed(3)}) contrast(1.03)`; }
+    mediaBox.style.filter = f.trim();
+  }
+}
+
+function bindCineControls() {
+  const $ = id => document.getElementById(id);
+  $("capCineToggle").addEventListener("click", () => {
+    const body = $("capCineBody");
+    const open = body.classList.toggle("hidden");
+    $("capCine").classList.toggle("open", !open);
+  });
+  // Toggle buttons reveal their controls + flip the effect on.
+  const FX = {
+    bottom_gradient: "cineBottomFx", top_gradient: "cineTopFx",
+    vignette: "cineVigFx", glow: "cineGlowFx", grain: "cineGrainFx", letterbox: "cineBarsFx",
+  };
+  document.querySelectorAll("#capCineBody .cap-tg[data-cine]").forEach(b => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.cine;
+      const now = !state.cinematic[k];
+      state.cinematic[k] = now;
+      b.classList.toggle("active", now);
+      const panel = $(FX[k]); if (panel) panel.classList.toggle("hidden", !now);
+      updateCinePreview();
+    });
+  });
+  $("cineGrade").addEventListener("change", e => { state.cinematic.color_grade = e.target.value; updateCinePreview(); });
+  // Slider ↔ number badge pairs, each writing one cinematic key.
+  const slider = (rangeId, numId, key, min, max) => {
+    const r = $(rangeId);
+    r.addEventListener("input", e => { setNum(numId, Math.round(e.target.value)); state.cinematic[key] = parseFloat(e.target.value); updateCinePreview(); });
+    bindNum(numId, min, max, n => { r.value = n; state.cinematic[key] = n; updateCinePreview(); });
+  };
+  slider("cineBottomH", "cineBottomHNum", "bottom_gradient_height", 0, 80);
+  slider("cineBottomS", "cineBottomSNum", "bottom_gradient_strength", 0, 100);
+  slider("cineTopH", "cineTopHNum", "top_gradient_height", 0, 80);
+  slider("cineTopS", "cineTopSNum", "top_gradient_strength", 0, 100);
+  slider("cineVigS", "cineVigSNum", "vignette_strength", 0, 100);
+  slider("cineGlowS", "cineGlowSNum", "glow_strength", 0, 100);
+  slider("cineGrainS", "cineGrainSNum", "grain_strength", 0, 100);
+  slider("cineBars", "cineBarsNum", "letterbox_size", 0, 100);
+  $("cineReset").addEventListener("click", () => {
+    Object.assign(state.cinematic, {
+      color_grade: "none", bottom_gradient: false, top_gradient: false,
+      vignette: false, glow: false, grain: false, letterbox: false,
+    });
+    $("cineGrade").value = "none";
+    document.querySelectorAll("#capCineBody .cap-tg[data-cine]").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#capCineBody .cap-fxbody").forEach(p => p.classList.add("hidden"));
+    updateCinePreview();
+  });
+  paintRanges();
+}
+
+// ---- Studio tabs (Templates / Customize styles) + gallery filters ----
+function bindStudioTabs() {
+  const panes = { templates: "stabTemplates", customize: "stabCustomize" };
+  document.querySelectorAll(".studio-tab").forEach(t => t.addEventListener("click", () => {
+    const tab = t.dataset.stab;
+    document.querySelectorAll(".studio-tab").forEach(x => x.classList.toggle("active", x === t));
+    Object.entries(panes).forEach(([k, id]) =>
+      document.getElementById(id).classList.toggle("hidden", k !== tab));
+    if (tab === "customize") {
+      // Show the controls directly (editor-style), not collapsed behind a toggle.
+      document.getElementById("capCustBody").classList.remove("hidden");
+      document.getElementById("capCustomizer").classList.add("open");
+      updateCaptionPreview();
+    }
+  }));
+  document.querySelectorAll(".gfilter").forEach(b => b.addEventListener("click", () => {
+    state.galleryFilter = b.dataset.gf;
+    document.querySelectorAll(".gfilter").forEach(x => x.classList.toggle("active", x === b));
+    renderPresetChips();
+  }));
+}
+
+function bindCaptionControls() {
+  const $ = id => document.getElementById(id);
+  $("capCustToggle").addEventListener("click", () => {
+    const body = $("capCustBody");
+    const open = body.classList.toggle("hidden");
+    $("capCustomizer").classList.toggle("open", !open);
+  });
+  $("capFont").addEventListener("change", e => { $("capFontVal").textContent = e.target.value; setCaptionOverride("font_family", e.target.value); });
+  $("capFontUpload").addEventListener("click", () => $("capFontInput").click());
+  $("capFontInput").addEventListener("change", e => uploadCaptionFont(e.target.files[0]));
+  $("capAnim").addEventListener("change", e => {
+    const v = e.target.value;
+    if (v === "karaoke") { state.captionOverrides.karaoke = true; state.captionOverrides.animation = "none"; }
+    else { state.captionOverrides.karaoke = false; state.captionOverrides.animation = v; }
+    updateCaptionPreview();
+  });
+  initColorPicker();
+  $("capSize").addEventListener("input", e => { setNum("capSizeNum", Math.round(e.target.value * 100)); setCaptionOverride("font_scale", parseFloat(e.target.value)); });
+  $("capTracking").addEventListener("input", e => { setNum("capTrackingNum", Math.round(e.target.value)); setCaptionOverride("tracking", parseFloat(e.target.value)); });
+  $("capOutline").addEventListener("input", e => { setNum("capOutlineNum", Math.round(e.target.value)); setCaptionOverride("outline_width", parseFloat(e.target.value)); });
+  // X/Y sliders → free placement (both must be set for the renderer to use \pos).
+  $("capPosX").addEventListener("input", e => {
+    const xy = effectivePosXY();
+    if (state.captionOverrides.pos_y == null) state.captionOverrides.pos_y = xy.y;
+    setCaptionOverride("pos_x", parseFloat(e.target.value));
+  });
+  $("capPosY").addEventListener("input", e => {
+    const xy = effectivePosXY();
+    if (state.captionOverrides.pos_x == null) state.captionOverrides.pos_x = xy.x;
+    setCaptionOverride("pos_y", parseFloat(e.target.value));
+  });
+  $("capRotation").addEventListener("input", e => setCaptionOverride("rotation", parseFloat(e.target.value)));
+  // Editable value badges (type a number) — two-way synced with the sliders.
+  bindNum("capSizeNum", 60, 180, n => { $("capSize").value = n / 100; setCaptionOverride("font_scale", n / 100); });
+  bindNum("capTrackingNum", 0, 30, n => { $("capTracking").value = n; setCaptionOverride("tracking", n); });
+  bindNum("capOutlineNum", 0, 16, n => { $("capOutline").value = n; setCaptionOverride("outline_width", n); });
+  bindNum("capPosXNum", 0, 100, n => { if (state.captionOverrides.pos_y == null) state.captionOverrides.pos_y = effectivePosXY().y; $("capPosX").value = n; setCaptionOverride("pos_x", n); });
+  bindNum("capPosYNum", 0, 100, n => { if (state.captionOverrides.pos_x == null) state.captionOverrides.pos_x = effectivePosXY().x; $("capPosY").value = n; setCaptionOverride("pos_y", n); });
+  bindNum("capRotationNum", -180, 180, n => { $("capRotation").value = n; setCaptionOverride("rotation", n); });
+  initCaptionDrag();
+  paintRanges();
+  document.querySelectorAll("#capCustBody .cap-tg").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.k;
+    const now = !captionToggleOn(effectiveCaptionCfg(), k);
+    b.classList.toggle("active", now);
+    if (now && k === "background_enabled") seedFx(["background_color", "background_opacity", "background_radius"]);
+    if (now && k === "shadow_enabled") seedFx(["shadow_color", "shadow_distance", "shadow_opacity"]);
+    if (now && k === "glow_enabled") seedFx(["glow_color", "glow_intensity"]);
+    setCaptionOverride(k, now);
+  }));
+  // Effect panel controls (Box / Drop shadow / Glow).
+  $("capBoxOpacity").addEventListener("input", e => { setNum("capBoxOpacityNum", Math.round(e.target.value)); setCaptionOverride("background_opacity", parseFloat(e.target.value)); });
+  bindNum("capBoxOpacityNum", 0, 100, n => { $("capBoxOpacity").value = n; setCaptionOverride("background_opacity", n); });
+  $("capBoxRadius").addEventListener("input", e => { setNum("capBoxRadiusNum", Math.round(e.target.value)); setCaptionOverride("background_radius", parseFloat(e.target.value)); });
+  bindNum("capBoxRadiusNum", 0, 40, n => { $("capBoxRadius").value = n; setCaptionOverride("background_radius", n); });
+  $("capShadowDist").addEventListener("input", e => { setNum("capShadowDistNum", Math.round(e.target.value)); setCaptionOverride("shadow_distance", parseFloat(e.target.value)); });
+  bindNum("capShadowDistNum", 0, 30, n => { $("capShadowDist").value = n; setCaptionOverride("shadow_distance", n); });
+  $("capShadowOpacity").addEventListener("input", e => { setNum("capShadowOpacityNum", Math.round(e.target.value)); setCaptionOverride("shadow_opacity", parseFloat(e.target.value)); });
+  bindNum("capShadowOpacityNum", 0, 100, n => { $("capShadowOpacity").value = n; setCaptionOverride("shadow_opacity", n); });
+  $("capGlow").addEventListener("input", e => { setNum("capGlowNum", Math.round(e.target.value)); setCaptionOverride("glow_intensity", parseFloat(e.target.value)); });
+  bindNum("capGlowNum", 0, 30, n => { $("capGlow").value = n; setCaptionOverride("glow_intensity", n); });
+  $("capReset").addEventListener("click", () => {
+    state.captionOverrides = {}; applyLanguageFont();
+    state.activeStyleKey = state.captionStyle;  // highlight the base preset, not a stale custom chip
+    markActiveChips();
+    syncCustomizerToPreset(); updateCaptionPreview();
+  });
+
+  // ---- Save-as-preset toolbar ----
+  const saveForm = $("capSaveForm"), saveName = $("capSaveName");
+  const openSaveForm = (open) => {
+    saveForm.classList.toggle("hidden", !open);
+    $("capSaveBtn").classList.toggle("hidden", open);
+    if (open) { saveName.value = ""; saveName.focus(); }
+  };
+  const commitSave = () => {
+    if (saveCurrentPreset(saveName.value)) openSaveForm(false);
+    else saveName.focus();
+  };
+  $("capSaveBtn").addEventListener("click", () => openSaveForm(true));
+  $("capSaveCancel").addEventListener("click", () => openSaveForm(false));
+  $("capSaveGo").addEventListener("click", commitSave);
+  saveName.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); commitSave(); }
+    else if (e.key === "Escape") openSaveForm(false);
+  });
+}
+
+function removeUpload() {
+  state.upload_id = null;
+  state.uploadName = null;
+  state.source = "url";
+  fileInput.value = "";
+  const urlIn = document.getElementById("url");
+  urlIn.readOnly = false; urlIn.value = "";
+  megabar.classList.remove("hasfile");
+  document.getElementById("upStatus").classList.add("hidden");
+  document.getElementById("removeUpload").classList.add("hidden");
+  clearPreviewVideo();
+  updateContinueState();
+}
+
+async function loadCompute() {
+  try {
+    const res = await fetch("/api/devices");
+    const d = await res.json();
+    GPU_NAME = d.gpu_name || null;
+    const opt = deviceSel.querySelector('option[value="cuda"]');
+    if (!d.cuda_available) {
+      // No usable GPU: disable the option so users can't pick a dead path.
+      if (opt) { opt.disabled = true; opt.textContent = "GPU (CUDA) — not available"; }
+    } else if (opt) {
+      // Auto-detected GPU: show its real name (when known) instead of a generic label.
+      opt.textContent = GPU_NAME ? `GPU — ${GPU_NAME}` : "GPU (CUDA) — fastest";
+    }
+    // Default to the GPU when one is available, otherwise CPU.
+    state.device = d.cuda_available ? "cuda" : "cpu";
+    deviceSel.value = state.device;
+    document.getElementById("deviceTag").textContent = deviceTagText(state.device);
+  } catch (e) {
+    state.device = "cpu";
+    deviceSel.value = "cpu";
+    document.getElementById("deviceTag").textContent = "—";
+  }
+  // Warm the currently selected device and show its status immediately.
+  warmDevice(state.device);
+}
+
+// ---- Errors ----
+function showError(msg) {
+  const el = document.getElementById("error");
+  el.innerHTML = `${ICONS.warn}<span>${escapeHtml(msg)}</span>`;
+  el.classList.remove("hidden");
+}
+function clearError() { document.getElementById("error").classList.add("hidden"); }
+
+// ---- Progress UI ----
+function buildSteps() {
+  const root = document.getElementById("steps");
+  root.innerHTML = "";
+  STAGES.forEach((s, i) => {
+    const div = document.createElement("div");
+    div.className = "step";
+    div.dataset.key = s.key;
+    div.innerHTML = `<div class="ring">${i + 1}</div><div class="label">${s.label}</div>`;
+    root.appendChild(div);
+  });
+}
+
+function updateSteps(stage, status) {
+  let curIdx = STAGES.findIndex(s => s.key === stage);
+  if (status === "done") curIdx = STAGES.length;
+  document.querySelectorAll(".step").forEach((el, i) => {
+    el.classList.toggle("done", i < curIdx);
+    el.classList.toggle("active", i === curIdx && status !== "done");
+    const ring = el.querySelector(".ring");
+    ring.textContent = i < curIdx ? "✓" : (i + 1);
+  });
+}
+
+function setBar(pct, msg, mode) {
+  const fill = document.getElementById("barFill");
+  fill.style.width = Math.round(pct) + "%";
+  fill.className = "bar-fill" + (mode ? " " + mode : "");
+  document.getElementById("barPct").textContent = Math.round(pct) + "%";
+  document.getElementById("barMsg").textContent = msg;
+  const sp = document.getElementById("barSpinner");
+  sp.style.display = (mode === "done" || mode === "error") ? "none" : "inline-block";
+  document.getElementById("barPct").style.color =
+    mode === "error" ? "var(--danger)" : (mode === "done" ? "var(--accent-hi)" : "var(--accent-hi)");
+}
+
+// ---- Results ----
+function showResultsHead() { document.getElementById("resultsHead").classList.remove("hidden"); }
+
+function renderClip(c) {
+  const root = document.getElementById("results");
+  const dur = (c.end - c.start).toFixed(1);
+  const card = document.createElement("div");
+  card.className = "clip";
+  card.innerHTML = `
+    <div class="clipcard-vid">
+      <video src="${c.url}" controls preload="metadata"></video>
+      <button class="dots" title="Options">${ICONS.dots}</button>
+      <div class="menu hidden">
+        <button data-act="folder">${ICONS.folder} Open in folder</button>
+        <button data-act="remove" class="danger">${ICONS.trash} Remove clip</button>
+      </div>
+    </div>
+    <div class="meta">
+      <h3>${escapeHtml(c.title)}</h3>
+      <div class="sub">${dur}s · ${c.start.toFixed(1)}–${c.end.toFixed(1)}s</div>
+      <div class="actions">
+        <a href="${c.url}" download="${escapeHtml(c.filename || '')}">${ICONS.download} Download</a>
+        <button class="copy" data-url="${c.url}">Copy link</button>
+      </div>
+    </div>`;
+  card.querySelector(".copy").onclick = (e) => {
+    const full = location.origin + e.target.dataset.url;
+    navigator.clipboard.writeText(full).then(() => {
+      e.target.textContent = "Copied!";
+      setTimeout(() => { e.target.textContent = "Copy link"; }, 1400);
+    });
+  };
+  const ref = parseClipUrl(c.url);
+  if (ref) wireClipMenu(card.querySelector(".clipcard-vid"), ref, card.querySelector("video"), () => card.remove());
+  root.appendChild(card);
+}
+
+function updateResultsCount(n) {
+  document.getElementById("resultsCount").textContent = n + (n === 1 ? " clip" : " clips");
+}
+
+// ---- Generate flow (SSE) ----
+const btn = document.getElementById("generateBtn");
+function setBusy(busy) {
+  btn.disabled = busy;
+  btn.innerHTML = busy ? '<span class="spinner"></span> Working…' : `${ICONS.bolt} Generate Shorts`;
+}
+
+function handleSnapshot(snap) {
+  if (snap.status === "error") {
+    setBar(snap.progress * 100, snap.message || "Failed.", "error");
+    showError(snap.error || snap.message || "The pipeline failed.");
+    setBusy(false);
+    closeStream();
+    return;
+  }
+
+  const mode = snap.status === "done" ? "done" : "";
+  setBar(snap.progress * 100, snap.message || "Working…", mode);
+  updateSteps(snap.stage, snap.status);
+
+  // Stream finished clips in as they appear.
+  if (snap.clips && snap.clips.length > state.renderedCount) {
+    showResultsHead();
+    for (let i = state.renderedCount; i < snap.clips.length; i++) renderClip(snap.clips[i]);
+    state.renderedCount = snap.clips.length;
+    updateResultsCount(state.renderedCount);
+  }
+
+  if (snap.status === "done") {
+    setBusy(false);
+    closeStream();
+    if (!snap.clips || !snap.clips.length) showError("No clips were produced.");
+    else loadSidebar();  // refresh the history panel with the new clips
+  }
+}
+
+function closeStream() {
+  if (state.evtSource) { state.evtSource.close(); state.evtSource = null; }
+}
+
+btn.addEventListener("click", async () => {
+  clearError();
+
+  const payload = {
+    aspect_ratio: state.aspect,
+    fit_mode: state.fit,
+    bar_text: state.fit === "square" ? (document.getElementById("barText").value.trim() || null) : null,
+    num_clips: state.numClips,
+    device: state.device,
+    caption_style: state.captionStyle,
+    language: state.language === "auto" ? null : state.language,
+  };
+  if (Object.keys(state.captionOverrides).length) payload.caption_overrides = state.captionOverrides;
+  if (cineActive()) payload.cinematic = state.cinematic;
+
+  if (state.source === "upload") {
+    if (!state.upload_id) { showError("Please upload a video file first (wait for it to finish)."); return; }
+    payload.upload_id = state.upload_id;
+    payload.upload_name = state.uploadName;
+  } else {
+    const url = document.getElementById("url").value.trim();
+    if (!url) { showError("Please paste a video URL first."); return; }
+    payload.video_url = url;
+    // Reuse the background-downloaded file when it finished for THIS exact URL,
+    // so the pipeline skips downloading the same video again.
+    if (state.downloadId && state.prefetchUrl === url) payload.download_id = state.downloadId;
+  }
+
+  // Reset UI.
+  setBusy(true);
+  closeStream();
+  state.renderedCount = 0;
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("resultsHead").classList.add("hidden");
+  document.getElementById("progressPanel").classList.remove("hidden");
+  buildSteps();
+  setBar(2, "Queued — starting pipeline…", "indeterminate");
+
+  let jobId;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || ("Request failed (" + res.status + ")"));
+    jobId = data.job_id;
+  } catch (e) {
+    setBar(0, "Failed to start.", "error");
+    showError("Could not start the job: " + e.message);
+    setBusy(false);
+    return;
+  }
+
+  // Subscribe to live progress.
+  const es = new EventSource(`/api/progress/${jobId}`);
+  state.evtSource = es;
+  es.onmessage = (ev) => {
+    try { handleSnapshot(JSON.parse(ev.data)); } catch (e) {}
+  };
+  es.onerror = async () => {
+    // Stream dropped — fall back to a one-shot result fetch before giving up.
+    closeStream();
+    try {
+      const res = await fetch(`/api/result/${jobId}`);
+      if (res.ok) { handleSnapshot(await res.json()); return; }
+    } catch (e) {}
+    if (btn.disabled) {
+      showError("Lost connection to the progress stream. The clips may still finish — refresh /api/result.");
+      setBusy(false);
+    }
+  };
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[m]));
+}
+
+// Keep the preview in sync: title bar updates as the user types, and the video
+// element reports whether the chosen file can actually play in the browser.
+document.getElementById("barText").addEventListener("input", updatePreviewFrame);
+document.getElementById("removeUpload").addEventListener("click", removeUpload);
+
+// Pasted link → live embedded preview (debounced so we don't reload on every keypress).
+let urlDebounce;
+document.getElementById("url").addEventListener("input", () => {
+  clearTimeout(urlDebounce);
+  urlDebounce = setTimeout(refreshUrlEmbed, 400);
+  updateContinueState();
+});
+
+(() => {
+  const pv = document.getElementById("previewVideo");
+  pv.addEventListener("error", () => {
+    // Ignore the error that fires when we deliberately clear the src.
+    if (pv.getAttribute("src")) { state.previewError = true; updatePreviewFrame(); }
+  });
+  pv.addEventListener("loadeddata", () => {
+    state.previewError = false;
+    pv.play().catch(() => {});
+    updatePreviewFrame();
+  });
+})();
+
+// ---- Left history sidebar + shared clip actions ----
+// Pull {clip_id, index} out of a /clips/<id>/<i>.mp4 url.
+function parseClipUrl(url) {
+  const m = (url || "").match(/\/clips\/([0-9a-f]{32})\/(\d+)\.mp4/);
+  return m ? { clip_id: m[1], index: parseInt(m[2], 10) } : null;
+}
+
+function closeAllMenus() {
+  document.querySelectorAll(".menu").forEach(m => m.classList.add("hidden"));
+}
+
+async function revealClip(clip_id, index) {
+  try {
+    const r = await fetch("/api/reveal", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clip_id, index }),
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.detail || "Could not open the folder."); }
+  } catch (e) { alert("Could not open the folder: " + e.message); }
+}
+
+async function removeClipReq(clip_id, index) {
+  try {
+    const r = await fetch(`/api/clip/${clip_id}/${index}`, { method: "DELETE" });
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+// Wire a more-menu button + dropdown to a clip's video element. `onRemove` runs
+// after a successful delete so the caller can drop its card.
+function wireClipMenu(root, ref, video, onRemove) {
+  const dots = root.querySelector(".dots");
+  const menu = root.querySelector(".menu");
+  dots.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wasHidden = menu.classList.contains("hidden");
+    closeAllMenus();
+    if (wasHidden) menu.classList.remove("hidden");
+  });
+  menu.addEventListener("click", (e) => e.stopPropagation());
+  menu.querySelectorAll("button").forEach(b => b.addEventListener("click", async () => {
+    const act = b.dataset.act;
+    menu.classList.add("hidden");
+    if (act === "play" && video) { video.paused ? video.play().catch(() => {}) : video.pause(); }
+    else if (act === "folder") revealClip(ref.clip_id, ref.index);
+    else if (act === "remove") {
+      if (!confirm("Remove this clip? This permanently deletes the file from disk.")) return;
+      const ok = await removeClipReq(ref.clip_id, ref.index);
+      if (ok) onRemove(); else alert("Could not remove the clip.");
+    }
+  }));
+}
+
+// A friendly display name for a processed video (history entry).
+function deriveName(entry) {
+  if (entry.source_type === "upload") return entry.source || "Uploaded video";
+  const url = entry.source || "";
+  let m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (m) return "YouTube · " + m[1];
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) return "Vimeo · " + m[1];
+  try { const u = new URL(url); return u.hostname.replace(/^www\./, "") + u.pathname; } catch (e) {}
+  return url || "Video";
+}
+
+function timeAgo(iso) {
+  const then = new Date(iso).getTime();
+  if (isNaN(then)) return "";
+  const s = Math.max(0, (Date.now() - then) / 1000);
+  if (s < 60) return "just now";
+  const m = s / 60; if (m < 60) return Math.floor(m) + "m ago";
+  const h = m / 60; if (h < 24) return Math.floor(h) + "h ago";
+  const d = h / 24; if (d < 7) return Math.floor(d) + "d ago";
+  return new Date(then).toLocaleDateString();
+}
+
+// Copy-to-clipboard wiring shared by every clip card.
+function wireCopyBtn(btn) {
+  btn.onclick = (e) => {
+    const full = location.origin + btn.dataset.url;
+    navigator.clipboard.writeText(full).then(() => {
+      const old = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = old; }, 1400);
+    });
+  };
+}
+
+// One row per processed video in the History panel.
+function buildVideoRow(entry) {
+  const clips = entry.clips || [];
+  const first = clips.find(c => c.exists !== false) || clips[0];
+  const icon = entry.source_type === "upload" ? ICONS.upload : ICONS.link;
+  const row = document.createElement("div");
+  row.className = "side-video";
+  row.innerHTML = `
+    <div class="vthumb">
+      ${first ? `<video src="${first.url}" preload="metadata" muted></video>` : ""}
+      <span class="vcount">${clips.length}</span>
+    </div>
+    <div class="vinfo">
+      <div class="vname">${icon}<span>${escapeHtml(deriveName(entry))}</span></div>
+      <div class="vsub">${clips.length} clip${clips.length === 1 ? "" : "s"} · ${timeAgo(entry.created)}</div>
+    </div>
+    <span class="vchev">${ICONS.chevR}</span>`;
+  row.addEventListener("click", () => openClipsView(entry.clip_id));
+  return row;
+}
+
+async function loadSidebar() {
+  const list = document.getElementById("sideList");
+  const empty = document.getElementById("sideEmpty");
+  try {
+    const res = await fetch("/api/history");
+    const entries = await res.json();
+    state.history = Array.isArray(entries) ? entries : [];
+    list.innerHTML = "";
+    if (!state.history.length) {
+      empty.textContent = "No history yet — generate clips and your videos will appear here.";
+      empty.classList.remove("hidden");
+    } else {
+      empty.classList.add("hidden");
+      state.history.forEach(e => list.appendChild(buildVideoRow(e)));
+    }
+    // If the clips view is open (e.g. just generated more), keep it in sync.
+    if (!document.getElementById("clipsView").classList.contains("hidden") && state.currentVideo) {
+      if (state.history.some(e => e.clip_id === state.currentVideo)) openClipsView(state.currentVideo);
+      else closeClipsView();
+    }
+  } catch (e) {
+    empty.textContent = "Could not load history: " + e.message;
+    empty.classList.remove("hidden");
+  }
+}
+
+// ---- Per-video clips view ("page" with a video switcher) ----
+function buildHistoryClipCard(clipId, c) {
+  const gone = c.exists === false;
+  const dur = (c.end - c.start).toFixed(1);
+  const card = document.createElement("div");
+  card.className = "clip" + (gone ? " gone" : "");
+  card.innerHTML = `
+    <div class="clipcard-vid">
+      <video src="${c.url}" controls preload="metadata"></video>
+      <button class="dots" title="Options">${ICONS.dots}</button>
+      <div class="menu hidden">
+        <button data-act="folder">${ICONS.folder} Open in folder</button>
+        <button data-act="remove" class="danger">${ICONS.trash} Remove clip</button>
+      </div>
+    </div>
+    <div class="meta">
+      <h3>${escapeHtml(c.title || ("Clip " + (c.index + 1)))}</h3>
+      <div class="sub">${dur}s · ${(+c.start).toFixed(1)}–${(+c.end).toFixed(1)}s</div>
+      <div class="actions">
+        <a href="${c.url}" download="${escapeHtml(c.filename || '')}">${ICONS.download} Download</a>
+        <button class="copy" data-url="${c.url}">Copy link</button>
+      </div>
+    </div>`;
+  wireCopyBtn(card.querySelector(".copy"));
+  wireClipMenu(
+    card.querySelector(".clipcard-vid"),
+    { clip_id: clipId, index: c.index },
+    card.querySelector("video"),
+    () => loadSidebar(),  // re-fetch history → re-renders the panel and this view
+  );
+  return card;
+}
+
+function openClipsView(clipId) {
+  const entry = state.history.find(e => e.clip_id === clipId);
+  if (!entry) return;
+  state.currentVideo = clipId;
+
+  document.getElementById("cvTitle").textContent = deriveName(entry);
+
+  // Populate the "Change video" switcher with every processed video.
+  const sel = document.getElementById("videoSwitcher");
+  sel.innerHTML = "";
+  state.history.forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.clip_id;
+    opt.textContent = `${deriveName(e)} (${(e.clips || []).length})`;
+    if (e.clip_id === clipId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  const grid = document.getElementById("cvGrid");
+  const empty = document.getElementById("cvEmpty");
+  grid.innerHTML = "";
+  const clips = entry.clips || [];
+  if (!clips.length) {
+    empty.classList.remove("hidden");
+  } else {
+    empty.classList.add("hidden");
+    clips.forEach(c => grid.appendChild(buildHistoryClipCard(clipId, c)));
+  }
+
+  document.getElementById("clipsView").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeClipsView() {
+  document.getElementById("clipsView").classList.add("hidden");
+  document.body.style.overflow = "";
+  state.currentVideo = null;
+}
+
+document.getElementById("videoSwitcher").addEventListener("change", (e) => openClipsView(e.target.value));
+document.getElementById("cvBack").addEventListener("click", closeClipsView);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !document.getElementById("clipsView").classList.contains("hidden")) closeClipsView();
+});
+
+document.getElementById("sideRefresh").addEventListener("click", loadSidebar);
+document.getElementById("sideCollapse").addEventListener("click", () => document.body.classList.add("sidebar-collapsed"));
+document.getElementById("sideReopen").addEventListener("click", () => document.body.classList.remove("sidebar-collapsed"));
+document.addEventListener("click", closeAllMenus);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAllMenus(); });
+
+// ---- Background pre-download (URL source) ----
+// When the user reaches Step 2 with a pasted link, start fetching the video so
+// it's ready (or nearly so) by the time they hit Generate. Progress shows under
+// the preview; the finished file is reused via download_id (no second download).
+let prefetchTimer = null;
+
+function fmtMB(bytes) {
+  return (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1) + " MB";
+}
+
+function setDlStatus(cls, msg, pct, barMode) {
+  const box = document.getElementById("dlStatus");
+  box.classList.remove("hidden");
+  box.className = "dlstatus " + (cls || "");
+  document.getElementById("dlStatusText").textContent = msg;
+  document.getElementById("dlStatusPct").textContent = (pct == null ? "" : Math.round(pct) + "%");
+  const bar = document.getElementById("dlStatusBar");
+  bar.className = "dlstatus-bar" + (barMode === "indeterminate" ? " indeterminate" : "");
+  if (barMode !== "indeterminate") bar.style.width = (pct == null ? 0 : pct) + "%";
+  document.getElementById("dlRetry").classList.toggle("hidden", cls !== "err");
+}
+
+function hideDlStatus() { document.getElementById("dlStatus").classList.add("hidden"); }
+function stopPrefetchPoll() { if (prefetchTimer) { clearTimeout(prefetchTimer); prefetchTimer = null; } }
+
+function renderPrefetch(snap) {
+  if (snap.status === "done") {
+    state.downloadId = snap.download_id;
+    setDlStatus("ready", "Video download completed", 100);
+    // Swap the preview frame from the embed to the freshly-downloaded local file.
+    state.previewError = false;
+    updatePreviewFrame();
+    // Kick off background transcription so Generate can skip it later.
+    startPretranscribe(snap.download_id);
+  } else if (snap.status === "error") {
+    state.downloadId = null;
+    setDlStatus("err", snap.error || snap.message || "Download failed.", null);
+  } else {
+    const total = snap.total_bytes || 0, done = snap.downloaded_bytes || 0;
+    if (total) setDlStatus("loading", `Downloaded ${fmtMB(done)} of ${fmtMB(total)}`, snap.progress * 100);
+    else if (done) setDlStatus("loading", `Downloaded ${fmtMB(done)}`, null, "indeterminate");
+    else setDlStatus("loading", snap.message || "Starting download…", null, "indeterminate");
+  }
+}
+
+async function pollPrefetch() {
+  if (!state.prefetchId) return;
+  try {
+    const res = await fetch("/api/prefetch/" + state.prefetchId);
+    if (!res.ok) throw new Error("status " + res.status);
+    const snap = await res.json();
+    renderPrefetch(snap);
+    if (snap.status === "running") prefetchTimer = setTimeout(pollPrefetch, 500);
+    else stopPrefetchPoll();
+  } catch (e) {
+    stopPrefetchPoll();
+    setDlStatus("err", "Lost contact with the download: " + e.message, null);
+  }
+}
+
+async function startPrefetch(force) {
+  const url = document.getElementById("url").value.trim();
+  if (state.source !== "url" || !url) { hideDlStatus(); return; }
+  // Already have this exact URL on disk — nothing to do.
+  if (!force && state.downloadId && state.prefetchUrl === url) {
+    setDlStatus("ready", "Video download completed", 100); return;
+  }
+  // A poll for this exact URL is already in flight — let it continue.
+  if (!force && state.prefetchId && state.prefetchUrl === url && prefetchTimer) return;
+
+  stopPrefetchPoll();
+  state.downloadId = null;
+  state.prefetchId = null;
+  state.prefetchUrl = url;
+  setDlStatus("loading", "Starting download…", null, "indeterminate");
+  try {
+    const res = await fetch("/api/prefetch", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ video_url: url }),
+    });
+    const snap = await res.json();
+    if (!res.ok) throw new Error(snap.detail || ("Request failed (" + res.status + ")"));
+    state.prefetchId = snap.prefetch_id;
+    renderPrefetch(snap);
+    if (snap.status === "running") prefetchTimer = setTimeout(pollPrefetch, 500);
+  } catch (e) {
+    setDlStatus("err", "Could not start the download: " + e.message, null);
+  }
+}
+
+document.getElementById("dlRetry").addEventListener("click", () => startPrefetch(true));
+
+// ---- Background pre-transcription ----
+// Once the video is on disk, transcribe it in the background (Whisper is the
+// slowest stage) so it's cached by the time the user hits Generate. Reuses the
+// same status panel: download phase → transcribe phase → "ready".
+let pretranscribeTimer = null;
+function stopPretranscribePoll() { if (pretranscribeTimer) { clearTimeout(pretranscribeTimer); pretranscribeTimer = null; } }
+
+function renderPretranscribe(snap) {
+  if (snap.status === "done") {
+    state.transcriptReady = true;
+    setDlStatus("ready", "Ready to generate — video & transcript prepared", 100);
+  } else if (snap.status === "error") {
+    // Non-fatal: Generate will just transcribe normally. Keep the truthful
+    // "downloaded" state rather than alarming the user.
+    state.transcriptReady = false;
+    setDlStatus("ready", "Video download completed", 100);
+  } else {
+    setDlStatus("loading", snap.message || "Transcribing audio in the background…", snap.progress * 100);
+  }
+}
+
+async function pollPretranscribe() {
+  if (!state.pretranscribeId) return;
+  try {
+    const res = await fetch("/api/pretranscribe/" + state.pretranscribeId);
+    if (!res.ok) throw new Error("status " + res.status);
+    const snap = await res.json();
+    renderPretranscribe(snap);
+    if (snap.status === "running") pretranscribeTimer = setTimeout(pollPretranscribe, 700);
+    else stopPretranscribePoll();
+  } catch (e) {
+    stopPretranscribePoll();  // silent: pipeline will transcribe on Generate
+  }
+}
+
+async function startPretranscribe(sourceId) {
+  if (!sourceId) return;
+  // Already prepared for this exact source — nothing to do.
+  if (state.transcriptReady && state.pretranscribeSource === sourceId) {
+    setDlStatus("ready", "Ready to generate — video & transcript prepared", 100); return;
+  }
+  // A poll for this exact source is already in flight — let it continue.
+  if (state.pretranscribeId && state.pretranscribeSource === sourceId && pretranscribeTimer) return;
+
+  stopPretranscribePoll();
+  state.transcriptReady = false;
+  state.pretranscribeId = null;
+  state.pretranscribeSource = sourceId;
+  try {
+    const res = await fetch("/api/pretranscribe", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_id: sourceId, device: state.device, language: state.language === "auto" ? null : state.language }),
+    });
+    const snap = await res.json();
+    if (!res.ok) throw new Error(snap.detail || ("Request failed (" + res.status + ")"));
+    state.pretranscribeId = snap.pretranscribe_id;
+    renderPretranscribe(snap);
+    if (snap.status === "running") pretranscribeTimer = setTimeout(pollPretranscribe, 700);
+  } catch (e) {
+    // Non-fatal — the pipeline still transcribes normally on Generate.
+  }
+}
+
+// ---- Two-step wizard navigation ----
+// A source is "ready" when there's a URL typed, or a file chosen/uploaded.
+function sourceReady() {
+  if (state.source === "upload") return !!(state.upload_id || state.uploadObjectUrl);
+  return !!document.getElementById("url").value.trim();
+}
+function updateContinueState() {
+  document.getElementById("toStep2").disabled = !sourceReady();
+}
+function goToStep(n) {
+  document.getElementById("step1").classList.toggle("hidden", n !== 1);
+  document.getElementById("step2").classList.toggle("hidden", n !== 2);
+  if (n === 2) {
+    updatePreviewFrame();   // bind the preview now that the frame is visible
+    // Link source → fetch the video in the background, then pre-transcribe.
+    // Uploaded files are already local, so skip straight to pre-transcription
+    // (only once the upload itself has finished, i.e. we have an upload_id).
+    if (state.source === "url") startPrefetch();
+    else if (state.upload_id) startPretranscribe(state.upload_id);
+    else hideDlStatus();
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+document.getElementById("toStep2").addEventListener("click", () => {
+  if (sourceReady()) goToStep(2);
+});
+document.getElementById("backToStep1").addEventListener("click", () => goToStep(1));
+
+loadCompute();
+bindStudioTabs();
+bindCaptionControls();
+bindCineControls();
+updateCinePreview();
+loadCaptionData();
+updatePreviewFrame();
+loadSidebar();
+updateContinueState();
+</script>
+</body>
+</html>
