@@ -97,7 +97,7 @@ def cuda_available() -> bool:
             _cuda_available = get_cuda_device_count() > 0
         except Exception:  # noqa: BLE001 - any failure means "no usable GPU"
             _cuda_available = False
-    return _cuda_available
+    return bool(_cuda_available)
 
 
 def available_devices() -> list[str]:

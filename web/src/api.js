@@ -20,6 +20,10 @@ async function jpost(path, body) {
 
 export const api = {
   health: () => jget("/health"),
+  getConfig: () => jget("/api/config"),
+  saveConfig: (cfg) => jpost("/api/config", cfg),
+  getEnvKeys: () => jget("/api/env-keys"),
+  saveEnvKeys: (keys) => jpost("/api/env-keys", { keys }),
   modelStatus: () => jget("/api/model-status"),
   devices: () => jget("/api/devices"),
   captionStyles: () => jget("/api/caption-styles"),

@@ -61,3 +61,14 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
     except Exception as exc:
         print(f"[Config] Error loading {config_path}: {exc}. Using default config.")
         return DEFAULT_CONFIG
+
+def save_config(config_data: Dict[str, Any], config_path: str = "config.yaml") -> bool:
+    """Saves configuration dictionary to config.yaml file."""
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
+        return True
+    except Exception as exc:
+        print(f"[Config] Error saving {config_path}: {exc}")
+        return False
+

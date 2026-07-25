@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -30,6 +31,12 @@ from . import captions, fonts, history, jobs, mood, music, prefetch, pretranscri
 from .clipper import ClipOptions, generate_clip
 from .models import ClipGenerationError, Device, GenerateRequest, InvalidVideoURLError, TranscriptionError
 from .paths import CLIPS_DIR, FONTS_DIR, MUSIC_DIR, STATIC_DIR, WEB_DIST_DIR, ensure_dirs
+
+# Ensure src/ is on sys.path to import clipper.config
+src_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+from clipper.config import load_config, save_config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,15 +60,6 @@ def _load_model_background() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create dirs, ensure the font, and start loading whisper.
-
-    The model load runs on a background thread rather than blocking startup:
-    on first run it also downloads the model (up to ~3GB), and a server that
-    isn't accepting connections yet looks like a dead install rather than a
-    progress bar. Starting immediately lets the frontend poll
-    /api/model-status and show real download progress instead of a refused
-    connection.
-    """
     ensure_dirs()
     fonts.ensure_fonts()
     threading.Thread(target=_load_model_background, daemon=True).start()
@@ -93,6 +91,67 @@ if (WEB_DIST_DIR / "assets").is_dir():
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "device": transcriber.get_device()}
+
+
+@app.get("/api/config")
+def get_app_config() -> dict:
+    """Returns the current configuration loaded from config.yaml."""
+    return load_config("config.yaml")
+
+
+@app.post("/api/config")
+def update_app_config(cfg: dict) -> dict:
+    """Updates config.yaml with new settings from GUI."""
+    ok = save_config(cfg, "config.yaml")
+    if not ok:
+        raise HTTPException(status_code=500, detail="Could not save config.yaml")
+    return {"status": "ok", "config": load_config("config.yaml")}
+
+
+@app.get("/api/env-keys")
+def get_env_keys() -> dict:
+    """Returns API keys status from .env file (masked)."""
+    keys = {}
+    for i in range(1, 11):
+        val = os.getenv(f"LLM_API_KEY_{i}") or ""
+        masked = (val[:7] + "..." + val[-4:]) if len(val) > 15 else ("Configured" if val else "")
+        keys[f"LLM_API_KEY_{i}"] = masked
+    total_configured = sum(1 for v in keys.values() if v)
+    return {"keys": keys, "total_keys": total_configured}
+
+
+@app.post("/api/env-keys")
+def update_env_keys(body: dict) -> dict:
+    """Updates .env file with new API key values."""
+    env_path = ".env"
+    existing_lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            existing_lines = f.readlines()
+
+    new_keys = body.get("keys", {})
+    env_dict = {}
+    for line in existing_lines:
+        line_str = line.strip()
+        if line_str and not line_str.startswith("#") and "=" in line_str:
+            k, v = line_str.split("=", 1)
+            env_dict[k.strip()] = v.strip()
+
+    for k, v in new_keys.items():
+        if v and not v.endswith("..."):
+            env_dict[k] = v.strip()
+
+    lines = ["# API Keys (10 Groq keys for rotation)\n"]
+    for k, v in env_dict.items():
+        lines.append(f"{k}={v}\n")
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+
+    return get_env_keys()
 
 
 @app.get("/api/model-status")
