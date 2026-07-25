@@ -89,6 +89,7 @@ class Job:
         self.progress = 0.0  # 0..1 overall (derived from stage span)
         self.message = "Queued..."
         self.clips: List[dict] = []
+        self.logs: List[dict] = []
         self.error: Optional[str] = None
         self.clip_id: Optional[str] = None
         self.cancelled = False
@@ -104,6 +105,8 @@ class Job:
             self.status = "cancelled"
             self.stage = "cancelled"
             self.message = "Cancelled."
+            ts = time.strftime("%H:%M:%S")
+            self.logs.append({"time": ts, "stage": "cancelled", "message": "Cancelled."})
             self._rev += 1
 
     # -- mutation ---------------------------------------------------------- #
@@ -117,12 +120,19 @@ class Job:
             self.stage_progress = frac
             self.progress = lo + frac * (hi - lo)
             self.message = message
+            ts = time.strftime("%H:%M:%S")
+            # Only append if different from last log message
+            if not self.logs or self.logs[-1]["message"] != message:
+                self.logs.append({"time": ts, "stage": stage, "message": message})
             self._rev += 1
 
     def add_clip(self, clip: dict) -> None:
         """Publish a finished clip so the UI can show it before the run ends."""
         with self._lock:
             self.clips.append(clip)
+            ts = time.strftime("%H:%M:%S")
+            title = clip.get("title") or f"Clip #{len(self.clips)}"
+            self.logs.append({"time": ts, "stage": self.stage, "message": f"Rendered clip: {title}"})
             self._rev += 1
 
     def finish(self, clips: List[dict]) -> None:
@@ -133,6 +143,8 @@ class Job:
             self.progress = 1.0
             self.message = f"Done - {len(clips)} clip(s) ready."
             self.clips = clips
+            ts = time.strftime("%H:%M:%S")
+            self.logs.append({"time": ts, "stage": "done", "message": f"Pipeline complete. {len(clips)} clip(s) ready."})
             self._rev += 1
 
     def fail(self, message: str) -> None:
@@ -141,6 +153,8 @@ class Job:
             self.stage = "error"
             self.error = message
             self.message = message
+            ts = time.strftime("%H:%M:%S")
+            self.logs.append({"time": ts, "stage": "error", "message": f"ERROR: {message}"})
             self._rev += 1
 
     # -- read -------------------------------------------------------------- #
@@ -155,6 +169,7 @@ class Job:
                 "progress": round(self.progress, 4),
                 "message": self.message,
                 "clips": list(self.clips),
+                "logs": list(self.logs),
                 "error": self.error,
                 "clip_id": self.clip_id,
                 "rev": self._rev,

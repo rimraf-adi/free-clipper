@@ -19,6 +19,7 @@ dependencies = [
     "pydantic>=2",
     "requests",
     "indic-transliteration",
+    "opencv-python-headless>=4.8.0",
 ]
 
 [build-system]

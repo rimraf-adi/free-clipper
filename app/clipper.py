@@ -429,6 +429,12 @@ def generate_clip(source_mp4: Path, start: float, end: float, opts: ClipOptions)
         inputs = ["-ss", f"{start:.3f}", "-i", src, "-loop", "1", "-i", str(mask.resolve())]
         music_idx = 2  # 0 = source, 1 = mask
         tail = ["-shortest"]
+    elif opts.fit_mode == FitMode.SPLIT:
+        width, height = target_size(opts.aspect_ratio, opts.fit_mode)
+        fc = _build_split_filter_complex(width, height, opts, out_dir)
+        inputs = ["-ss", f"{start:.3f}", "-i", src]
+        music_idx = 1  # 0 = source
+        tail = []
     else:
         width, height = target_size(opts.aspect_ratio, opts.fit_mode)
         fc = _build_crop_filter_complex(width, height, opts, out_dir)

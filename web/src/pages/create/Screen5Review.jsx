@@ -22,17 +22,41 @@ export default function Screen5Review({ busy, snap, clips, error, onCancel, onOp
         {error && <div className="error">{error}</div>}
 
         {snap && (
-          <div className="cc-progress" style={{ padding: 0 }}>
-            <div className="steps">
-              {STEPS.map(([k, lbl], i) => (
-                <div key={k} className={"step" + (done || i < curStep ? " done" : i === curStep ? " active" : "")}>
-                  <div className="ring">{done || i < curStep ? "✓" : i + 1}</div><div className="lbl">{lbl}</div>
-                </div>
-              ))}
+          <>
+            <div className="cc-progress" style={{ padding: 0 }}>
+              <div className="steps">
+                {STEPS.map(([k, lbl], i) => (
+                  <div key={k} className={"step" + (done || i < curStep ? " done" : i === curStep ? " active" : "")}>
+                    <div className="ring">{done || i < curStep ? "✓" : i + 1}</div><div className="lbl">{lbl}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="bar-row"><span className="msg">{busy && <span className="spinner" />}{snap.message}</span><span className="pct">{pct}%</span></div>
+              <div className="track"><div className="fill" style={{ width: pct + "%" }} /></div>
             </div>
-            <div className="bar-row"><span className="msg">{busy && <span className="spinner" />}{snap.message}</span><span className="pct">{pct}%</span></div>
-            <div className="track"><div className="fill" style={{ width: pct + "%" }} /></div>
-          </div>
+
+            <details style={{ marginTop: 16, background: "#18181B", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--line, #27272A)" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "#E4E4E7", fontSize: 13, userSelect: "none" }}>
+                📜 Live Pipeline Console Logs ({snap.logs?.length || 0} entries)
+              </summary>
+              <div style={{
+                marginTop: 10, maxHeight: 220, overflowY: "auto", fontFamily: "monospace",
+                fontSize: 11, background: "#09090B", color: "#10B981", padding: 10, borderRadius: 6
+              }}>
+                {(!snap.logs || snap.logs.length === 0) ? (
+                  <div style={{ color: "#71717A" }}>No log entries recorded yet...</div>
+                ) : (
+                  snap.logs.map((l, idx) => (
+                    <div key={idx} style={{ marginBottom: 4, lineHeight: 1.4 }}>
+                      <span style={{ color: "#71717A", marginRight: 8 }}>[{l.time}]</span>
+                      <span style={{ color: "#38BDF8", marginRight: 8 }}>[{(l.stage || "LOG").toUpperCase()}]</span>
+                      <span style={{ color: l.stage === "error" ? "#F87171" : "#10B981" }}>{l.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </details>
+          </>
         )}
       </div>
 

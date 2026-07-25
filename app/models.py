@@ -52,13 +52,16 @@ class AspectRatio(str, Enum):
 class FitMode(str, Enum):
     """How the source is fitted into the target frame.
 
+    - auto:   AI Smart Subject Reframing (Face Tracking + Active Speaker Pan + Split-Screen Stacking).
     - crop:   scale to *cover* the chosen aspect ratio, then center-crop (fills it).
-    - square: force a 1:1 square frame and center-crop to fill it. The chosen
-              aspect_ratio is IGNORED in this mode.
+    - square: force a 1:1 square frame and center-crop to fill it.
+    - split:  force a vertical 9:16 Top-Bottom split-screen stack for 2 speakers.
     """
 
+    AUTO = "auto"
     CROP = "crop"
     SQUARE = "square"
+    SPLIT = "split"
 
 
 class SquareCorners(str, Enum):
