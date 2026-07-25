@@ -38,7 +38,7 @@ export default function Create({ step, setStep }) {
 
   // Output
   const [aspect, setAspect] = useState("9:16");
-  const [fit, setFit] = useState("crop");
+  const [fit, setFit] = useState("auto");
   const [barText, setBarText] = useState("");
   const [barTextColor, setBarTextColor] = useState("#FFFFFF");
   const [barTextAnim, setBarTextAnim] = useState("none");
@@ -51,7 +51,7 @@ export default function Create({ step, setStep }) {
   const outputAspect = fit === "square" ? "1:1" : aspect;
   function setOutputAspect(v) {
     if (v === "1:1") setFit("square");
-    else { setFit("crop"); setAspect(v); }
+    else { if (fit === "square") setFit("auto"); setAspect(v); }
   }
 
   // Background music
@@ -306,7 +306,7 @@ export default function Create({ step, setStep }) {
           language={language} changeLanguage={changeLanguage}
           device={device} setDevice={setDevice} devices={devices}
           numClips={numClips} setNumClips={setNumClips} clipLen={clipLen} setClipLen={setClipLen}
-          studio={studio} fonts={fonts} aspect={aspect} fit={fit} signature={signature} setSig={setSig} videoRef={videoRef}
+          studio={studio} fonts={fonts} aspect={aspect} fit={fit} setFit={setFit} signature={signature} setSig={setSig} videoRef={videoRef}
           onBack={() => setStep(1)}
           onNext={() => setStep(3)}
           nextEnabled={!["downloading", "idle"].includes(prepView.phase)}

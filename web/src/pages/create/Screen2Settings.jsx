@@ -14,7 +14,7 @@ export default function Screen2Settings({
   squareCorners, setSquareCorners, barText, setBarText, barTextColor, setBarTextColor,
   barTextAnim, setBarTextAnim, language, changeLanguage, device, setDevice, devices,
   numClips, setNumClips, clipLen, setClipLen,
-  studio, aspect, fit, signature, setSig, videoRef,
+  studio, aspect, fit, setFit, signature, setSig, videoRef,
   onBack, onNext, nextEnabled,
 }) {
   const isSquare = outputAspect === "1:1";
@@ -29,6 +29,17 @@ export default function Screen2Settings({
           <div className="toggle">
             {ASPECTS.map(([v, l]) => <button key={v} className={outputAspect === v ? "active" : ""} onClick={() => setOutputAspect(v)}>{l}</button>)}
           </div>
+
+          {!isSquare && (
+            <>
+              <label className="fieldlabel" style={{ marginTop: 14 }}>Framing mode</label>
+              <div className="toggle">
+                {[["auto", "Auto AI Reframing"], ["crop", "Center Crop"], ["split", "Split-Screen Stack"]].map(([v, l]) => (
+                  <button key={v} className={fit === v ? "active" : ""} onClick={() => setFit(v)}>{l}</button>
+                ))}
+              </div>
+            </>
+          )}
 
           {isSquare && (
             <>
