@@ -45,7 +45,7 @@ def split_audio_into_chunks(audio_path: str, chunk_dir: str, chunk_duration: flo
             "-ss", str(offset),
             "-i", audio_path,
             "-t", str(chunk_duration),
-            "-c", "copy",
+            "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
             chunk_path
         ]
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

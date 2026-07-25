@@ -117,10 +117,36 @@ export default function App() {
   // The Create landing (step 1) is a clean, full-screen page: the sidebar + topbar
   // are HIDDEN (via the .is-landing class), not unmounted. <Create> stays mounted
   // across landing→editor so its source/url/upload state survives.
+  const [showLogsDrawer, setShowLogsDrawer] = useState(false);
+  const [globalLogs, setGlobalLogs] = useState([]);
+
+  // Poll job logs when drawer is open or job is active
+  useEffect(() => {
+    let alive = true;
+    const pollLogs = async () => {
+      try {
+        const hist = await api.history();
+        if (!alive) return;
+        // Collect history logs
+        const logs = [];
+        (hist || []).slice(0, 5).forEach((entry) => {
+          logs.push({
+            time: new Date(entry.created_at * 1000).toLocaleTimeString(),
+            stage: "HISTORY",
+            message: `Past job: ${entry.source} (${entry.clips?.length || 0} clips)`
+          });
+        });
+        setGlobalLogs(logs);
+      } catch {}
+    };
+    pollLogs();
+  }, [showLogsDrawer]);
+
   const chromeless = page === "create" && step === 1;
   const t = TITLES[page];
 
-  const go = (id) => { setPage(id); if (id === "create") setStep(1); setNavOpen(false); };
+  // Preserve step when navigating tabs! Do NOT reset setStep(1)
+  const go = (id) => { setPage(id); setNavOpen(false); };
 
   if (modelStatus.status !== "ready") {
     return (
@@ -171,6 +197,14 @@ export default function App() {
             <div className="sub">{t.sub}</div>
           </div>
           <div className="topbar-right">
+            <button
+              className="chip"
+              onClick={() => setShowLogsDrawer(!showLogsDrawer)}
+              style={{ cursor: "pointer", background: showLogsDrawer ? "var(--accent)" : "transparent", color: showLogsDrawer ? "#000" : "inherit" }}
+              title="Toggle Pipeline Console Logs"
+            >
+              📜 Logs
+            </button>
             <ThemeSwitch theme={theme} setTheme={setTheme} />
             <span className={"badge " + (online ? "ok" : online === false ? "warn" : "")}>
               <span className="dot" />
@@ -178,6 +212,33 @@ export default function App() {
             </span>
           </div>
         </header>
+
+        {/* Global Console Logs Drawer */}
+        {showLogsDrawer && (
+          <div style={{
+            position: "fixed", right: 20, top: 70, width: 420, maxWidth: "90vw", zIndex: 9999,
+            background: "#18181B", border: "1px solid var(--line, #333)", borderRadius: 10,
+            boxShadow: "0 10px 25px rgba(0,0,0,0.5)", padding: 14
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: "#E4E4E7" }}>📜 Pipeline Console Logs</span>
+              <button onClick={() => setShowLogsDrawer(false)} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", fontSize: 16 }}>✕</button>
+            </div>
+            <div style={{ maxHeight: 300, overflowY: "auto", fontFamily: "monospace", fontSize: 11, background: "#09090B", color: "#10B981", padding: 10, borderRadius: 6 }}>
+              {globalLogs.length === 0 ? (
+                <div style={{ color: "#71717A" }}>No pipeline activity recorded yet...</div>
+              ) : (
+                globalLogs.map((l, idx) => (
+                  <div key={idx} style={{ marginBottom: 4, lineHeight: 1.4 }}>
+                    <span style={{ color: "#71717A", marginRight: 6 }}>[{l.time}]</span>
+                    <span style={{ color: "#38BDF8", marginRight: 6 }}>[{l.stage}]</span>
+                    <span>{l.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="content">
           {/* Orbs are ALWAYS in the tree (hidden via CSS off the landing) so that
@@ -189,7 +250,10 @@ export default function App() {
             <span className="orb orb-4" />
             <span className="orb orb-5" />
           </div>
-          {page === "create" && <Create key="create" step={step} setStep={setStep} />}
+          {/* Preserve <Create> state across tab switches so wizard state is never lost */}
+          <div style={{ display: page === "create" ? "block" : "none" }}>
+            <Create key="create" step={step} setStep={setStep} />
+          </div>
           {page === "library" && <Library />}
           {page === "settings" && <Settings />}
         </div>

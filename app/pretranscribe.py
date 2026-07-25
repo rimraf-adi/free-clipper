@@ -54,15 +54,31 @@ def _try_groq_whisper(
         from clipper.groq_client import GroqModelPool
         from clipper.transcribe import transcribe as groq_transcribe
 
-        if progress:
-            progress(0.05, "Transcribing via Groq Whisper API (cloud)...")
+        import subprocess
 
-        # Use the clipper transcribe module which handles chunking for large files
-        audio_path = str(source_path)
+        if progress:
+            progress(0.10, "Extracting audio track for Whisper API...")
+
         work_dir = str(TRANSCRIPTS_DIR / f"groq_{key}")
         os.makedirs(work_dir, exist_ok=True)
+        audio_path = os.path.join(work_dir, "audio.wav")
+
+        # Extract clean 16kHz mono WAV audio if not already extracted
+        if not os.path.exists(audio_path):
+            cmd = [
+                "ffmpeg", "-y", "-i", str(source_path),
+                "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+                audio_path
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        if progress:
+            progress(0.35, "Transcribing audio with Groq Whisper API...")
 
         transcript_segments = groq_transcribe(audio_path, out_dir=work_dir)
+
+        if progress:
+            progress(0.85, "Processing Whisper transcript timestamps...")
 
         if not transcript_segments:
             logger.warning("Groq Whisper returned no segments. Falling back to local.")
