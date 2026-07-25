@@ -250,7 +250,7 @@ def _run_pipeline(job: Job) -> None:
                 elif status == "finished":
                     job.set_stage("downloading", 1.0, "Download complete. Preparing...")
 
-            source_mp4 = downloader.download_video(req.video_url, progress_hook=on_download)
+            source_mp4 = downloader.download_video(req.video_url or "", progress_hook=on_download)
 
         # 2) Transcribe locally (word timestamps) on the requested device. The
         # transcript is keyed by the source file id (its stem), so a transcript

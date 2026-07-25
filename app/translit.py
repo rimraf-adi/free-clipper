@@ -29,9 +29,12 @@ import unicodedata
 
 logger = logging.getLogger(__name__)
 
+sanscript = None
+transliterate = None
+
 try:
-    from indic_transliteration import sanscript
-    from indic_transliteration.sanscript import transliterate
+    from indic_transliteration import sanscript  # type: ignore
+    from indic_transliteration.sanscript import transliterate  # type: ignore
 
     _AVAILABLE = True
 except Exception:  # noqa: BLE001 - degrade to a no-op if the dep is missing
@@ -59,7 +62,7 @@ def available() -> bool:
 
 def _romanize_word(word: str) -> str:
     """Romanise a single Devanagari token to readable Hinglish."""
-    if not _DEVANAGARI.search(word):
+    if not _AVAILABLE or transliterate is None or sanscript is None or not _DEVANAGARI.search(word):
         return word  # numbers / Latin / punctuation pass straight through
 
     iast = transliterate(word, sanscript.DEVANAGARI, sanscript.IAST)

@@ -13,7 +13,7 @@ import os
 import re
 import uuid
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import yt_dlp
 
@@ -61,7 +61,7 @@ def _is_terminal(reason: str) -> bool:
 _PLAYER_CLIENTS = ["android", "ios", "tv", "mweb"]
 
 
-def _download_attempts(base_opts: dict) -> list[tuple[str, dict]]:
+def _download_attempts(base_opts: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Ordered (label, ydl_opts) attempts.
 
     Order is cheapest-and-most-likely first:
@@ -147,7 +147,7 @@ def download_video(
 
     out_template = str(DOWNLOADS_DIR / f"{url_hash}.%(ext)s")
 
-    base_opts = {
+    base_opts: dict[str, Any] = {
         # Prefer the best stream up to 1080p (plenty for shorts, avoids slow 4K
         # downloads). Container is normalised to mp4 by merge_output_format, so
         # we don't restrict by extension - that was too strict and could fall
@@ -174,7 +174,7 @@ def download_video(
     ok = False
     for label, opts in _download_attempts(base_opts):
         try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
+            with yt_dlp.YoutubeDL(cast(Any, opts)) as ydl:
                 ydl.download([url.strip()])
             ok = True
             if label != "default":

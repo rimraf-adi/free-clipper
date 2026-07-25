@@ -223,7 +223,7 @@ def upload(file: UploadFile = File(...)) -> dict:
     to disk doesn't block the event loop.
     """
     try:
-        info = uploads.save_upload(file.filename, file.file)
+        info = uploads.save_upload(file.filename or "upload.mp4", file.file)
     except InvalidVideoURLError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     finally:
@@ -241,7 +241,7 @@ def get_fonts() -> dict:
 def upload_font(file: UploadFile = File(...)) -> dict:
     """Accept a user .ttf/.otf font and register it for use in captions."""
     try:
-        info = fonts.save_user_font(file.filename, file.file)
+        info = fonts.save_user_font(file.filename or "font.ttf", file.file)
     except InvalidVideoURLError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     finally:
@@ -259,7 +259,7 @@ def get_music() -> dict:
 def upload_music(file: UploadFile = File(...)) -> dict:
     """Accept a user audio file and add it to the background-music library."""
     try:
-        info = music.save_track(file.filename, file.file)
+        info = music.save_track(file.filename or "audio.mp3", file.file)
     except InvalidVideoURLError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     finally:
