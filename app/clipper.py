@@ -164,11 +164,23 @@ def _signature_stages(in_label: str, sig: Optional[dict], w: int, h: int, work_d
     if not sig or not sig.get("enabled") or not (sig.get("text") or "").strip():
         return [], in_label
     scale = w / 1080.0
-    size = max(10, int(round(float(sig.get("size") or 34) * scale)))
-    alpha = max(0.0, min(1.0, float(sig.get("opacity") if sig.get("opacity") is not None else 75) / 100.0))
+    raw_size = sig.get("size")
+    size_val = float(raw_size) if raw_size is not None else 34.0
+    size = max(10, int(round(size_val * scale)))
+
+    raw_opacity = sig.get("opacity")
+    opacity_val = float(raw_opacity) if raw_opacity is not None else 75.0
+    alpha = max(0.0, min(1.0, opacity_val / 100.0))
+
     col = (sig.get("color") or "#FFFFFF").replace("#", "0x")
-    px = max(0.0, min(1.0, float(sig.get("pos_x") if sig.get("pos_x") is not None else 50) / 100.0))
-    py = max(0.0, min(1.0, float(sig.get("pos_y") if sig.get("pos_y") is not None else 92) / 100.0))
+
+    raw_px = sig.get("pos_x")
+    px_val = float(raw_px) if raw_px is not None else 50.0
+    px = max(0.0, min(1.0, px_val / 100.0))
+
+    raw_py = sig.get("pos_y")
+    py_val = float(raw_py) if raw_py is not None else 92.0
+    py = max(0.0, min(1.0, py_val / 100.0))
     txt = _escape_drawtext(sig["text"].strip())
     stage = (
         f"[{in_label}]drawtext=fontfile={_rel_for_filter(_BAR_FONT, work_dir)}:"
@@ -404,6 +416,19 @@ _ENCODE_ARGS = [
 ]
 
 
+def _build_split_filter_complex(w: int, h: int, opts: ClipOptions, work_dir: Path) -> str:
+    """Renders a 9:16 vertical split-screen stacked video (Top Speaker + Bottom Speaker)."""
+    half_h = h // 2
+    stages = [
+        "[0:v]split=2[v_top_in][v_bot_in]",
+        f"[v_top_in]crop=ih*9/16:ih/2:iw*0.1:ih*0.1,scale={w}:{half_h}[v_top]",
+        f"[v_bot_in]crop=ih*9/16:ih/2:iw*0.55:ih*0.1,scale={w}:{half_h}[v_bot]",
+        "[v_top][v_bot]vstack[v_stacked]",
+    ]
+    finish = _finish_stages("v_stacked", w, h, opts, work_dir)
+    return ";".join(stages + finish)
+
+
 def generate_clip(source_mp4: Path, start: float, end: float, opts: ClipOptions) -> Path:
     """Cut [start, end] from `source_mp4`, reframe + caption it, return the mp4.
 
@@ -445,7 +470,7 @@ def generate_clip(source_mp4: Path, start: float, end: float, opts: ClipOptions)
     # Background music: loop the track, mix it under the audio, duck it under speech.
     # ``music_start`` seeks into the track first (so a chosen beat lands at the clip
     # start); ``-ss`` before ``-i`` applies to the looped input's first pass.
-    if has_music:
+    if has_music and opts.music_path is not None:
         seek = ["-ss", f"{max(0.0, opts.music_start):.2f}"] if opts.music_start and opts.music_start > 0 else []
         inputs += ["-stream_loop", "-1", *seek, "-i", str(Path(opts.music_path).resolve())]
         fc = fc + ";" + _music_audio_graph(music_idx, opts.music_volume, opts.music_duck)

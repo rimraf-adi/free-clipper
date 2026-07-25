@@ -16,13 +16,13 @@ import cv2
 logger = logging.getLogger(__name__)
 
 # Load Haar cascade once
-_HAAR_CASCADE_PATH = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 _face_cascade = None
 
 def _get_cascade():
     global _face_cascade
     if _face_cascade is None:
-        _face_cascade = cv2.CascadeClassifier(_HAAR_CASCADE_PATH)
+        path = getattr(getattr(cv2, "data", None), "haarcascades", "") + "haarcascade_frontalface_default.xml"
+        _face_cascade = getattr(cv2, "CascadeClassifier", lambda p: None)(path)
     return _face_cascade
 
 
@@ -58,12 +58,14 @@ def detect_faces_in_clip(
                 continue
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                minSize=(60, 60)
-            )
+            faces = []
+            if cascade is not None and hasattr(cascade, "detectMultiScale"):
+                faces = cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=1.1,
+                    minNeighbors=5,
+                    minSize=(60, 60)
+                )
 
             frame_faces = []
             for (x, y, w, h) in faces:
