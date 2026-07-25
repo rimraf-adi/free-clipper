@@ -24,6 +24,7 @@ export const api = {
   saveConfig: (cfg) => jpost("/api/config", cfg),
   getEnvKeys: () => jget("/api/env-keys"),
   saveEnvKeys: (keys) => jpost("/api/env-keys", { keys }),
+  logs: () => jget("/api/logs"),
   modelStatus: () => jget("/api/model-status"),
   devices: () => jget("/api/devices"),
   captionStyles: () => jget("/api/caption-styles"),

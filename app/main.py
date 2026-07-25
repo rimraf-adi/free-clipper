@@ -28,6 +28,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import captions, fonts, history, jobs, mood, music, prefetch, pretranscribe, reframe, transcriber, uploads
+from .logger_stream import install_terminal_log_streamer, get_terminal_logs
 from .clipper import ClipOptions, generate_clip
 from .models import ClipGenerationError, Device, GenerateRequest, InvalidVideoURLError, TranscriptionError
 from .paths import CLIPS_DIR, FONTS_DIR, MUSIC_DIR, STATIC_DIR, WEB_DIST_DIR, ensure_dirs
@@ -37,6 +38,9 @@ src_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 from clipper.config import load_config, save_config
+
+# Install terminal log streamer immediately on startup
+install_terminal_log_streamer()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,6 +95,12 @@ if (WEB_DIST_DIR / "assets").is_dir():
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "device": transcriber.get_device()}
+
+
+@app.get("/api/logs")
+def get_realtime_terminal_logs(limit: int = 300) -> dict:
+    """Returns all real-time terminal stdout, stderr, and Python log records for GUI console."""
+    return {"logs": get_terminal_logs(limit)}
 
 
 @app.get("/api/config")

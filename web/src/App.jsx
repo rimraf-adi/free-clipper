@@ -120,26 +120,21 @@ export default function App() {
   const [showLogsDrawer, setShowLogsDrawer] = useState(false);
   const [globalLogs, setGlobalLogs] = useState([]);
 
-  // Poll job logs when drawer is open or job is active
+  // Poll real-time terminal stdout/stderr logs from backend
   useEffect(() => {
     let alive = true;
-    const pollLogs = async () => {
+    let timer;
+    const fetchLogs = async () => {
       try {
-        const hist = await api.history();
-        if (!alive) return;
-        // Collect history logs
-        const logs = [];
-        (hist || []).slice(0, 5).forEach((entry) => {
-          logs.push({
-            time: new Date(entry.created_at * 1000).toLocaleTimeString(),
-            stage: "HISTORY",
-            message: `Past job: ${entry.source} (${entry.clips?.length || 0} clips)`
-          });
-        });
-        setGlobalLogs(logs);
+        const res = await api.logs();
+        if (alive && res && res.logs) {
+          setGlobalLogs(res.logs);
+        }
       } catch {}
+      if (alive) timer = setTimeout(fetchLogs, 1500);
     };
-    pollLogs();
+    fetchLogs();
+    return () => { alive = false; clearTimeout(timer); };
   }, [showLogsDrawer]);
 
   const chromeless = page === "create" && step === 1;
@@ -203,7 +198,7 @@ export default function App() {
               style={{ cursor: "pointer", background: showLogsDrawer ? "var(--accent)" : "transparent", color: showLogsDrawer ? "#000" : "inherit" }}
               title="Toggle Pipeline Console Logs"
             >
-              📜 Logs
+              📜 Logs ({globalLogs.length})
             </button>
             <ThemeSwitch theme={theme} setTheme={setTheme} />
             <span className={"badge " + (online ? "ok" : online === false ? "warn" : "")}>
@@ -216,23 +211,23 @@ export default function App() {
         {/* Global Console Logs Drawer */}
         {showLogsDrawer && (
           <div style={{
-            position: "fixed", right: 20, top: 70, width: 420, maxWidth: "90vw", zIndex: 9999,
+            position: "fixed", right: 20, top: 70, width: 480, maxWidth: "90vw", zIndex: 9999,
             background: "#18181B", border: "1px solid var(--line, #333)", borderRadius: 10,
             boxShadow: "0 10px 25px rgba(0,0,0,0.5)", padding: 14
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: "#E4E4E7" }}>📜 Pipeline Console Logs</span>
+              <span style={{ fontWeight: 700, fontSize: 13, color: "#E4E4E7" }}>📜 Live Terminal Console Output</span>
               <button onClick={() => setShowLogsDrawer(false)} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
-            <div style={{ maxHeight: 300, overflowY: "auto", fontFamily: "monospace", fontSize: 11, background: "#09090B", color: "#10B981", padding: 10, borderRadius: 6 }}>
+            <div style={{ maxHeight: 340, overflowY: "auto", fontFamily: "monospace", fontSize: 11, background: "#09090B", color: "#10B981", padding: 10, borderRadius: 6 }}>
               {globalLogs.length === 0 ? (
-                <div style={{ color: "#71717A" }}>No pipeline activity recorded yet...</div>
+                <div style={{ color: "#71717A" }}>No terminal logs recorded yet...</div>
               ) : (
                 globalLogs.map((l, idx) => (
-                  <div key={idx} style={{ marginBottom: 4, lineHeight: 1.4 }}>
+                  <div key={idx} style={{ marginBottom: 3, lineHeight: 1.35, wordBreak: "break-word" }}>
                     <span style={{ color: "#71717A", marginRight: 6 }}>[{l.time}]</span>
-                    <span style={{ color: "#38BDF8", marginRight: 6 }}>[{l.stage}]</span>
-                    <span>{l.message}</span>
+                    <span style={{ color: l.level === "ERROR" ? "#EF4444" : "#38BDF8", marginRight: 6 }}>[{l.level || "INFO"}]</span>
+                    <span style={{ color: l.level === "ERROR" ? "#F87171" : "#E4E4E7" }}>{l.text}</span>
                   </div>
                 ))
               )}
