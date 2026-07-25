@@ -30,7 +30,8 @@ ALLOWED_EXTS = {
     ".flv", ".wmv", ".mpeg", ".mpg", ".ts", ".m2ts",
 }
 
-_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+# ID can be a 32-char hex upload uuid OR a 16-char hex sha256 url_hash from prefetch/downloader.
+_ID_RE = re.compile(r"^[0-9a-fA-F]{16,64}$")
 
 
 def save_upload(filename: str, fileobj: BinaryIO) -> dict:
@@ -71,16 +72,19 @@ def save_upload(filename: str, fileobj: BinaryIO) -> dict:
 
 
 def resolve_upload(upload_id: str) -> Path:
-    """Map an ``upload_id`` back to the saved file path.
+    """Map an ``upload_id`` or ``download_id`` back to the saved file path.
 
     Raises:
         InvalidVideoURLError: malformed id or file no longer present.
     """
     if not upload_id or not _ID_RE.match(upload_id):
         raise InvalidVideoURLError("Invalid upload reference.")
-    matches = sorted(DOWNLOADS_DIR.glob(f"{upload_id}.*"))
+    matches = [
+        p for p in sorted(DOWNLOADS_DIR.glob(f"{upload_id}.*"))
+        if not p.name.endswith((".part", ".ytdl", ".temp", ".tmp")) and p.stat().st_size > 1024
+    ]
     if not matches:
         raise InvalidVideoURLError(
-            "The uploaded file could not be found. Please upload it again."
+            "The uploaded or prefetched file could not be found. Please upload or try again."
         )
     return matches[0]

@@ -112,6 +112,19 @@ def _clean_ydl_error(raw: str) -> str:
     return line[:300]
 
 
+def normalize_url(url: str) -> str:
+    """Normalize video URLs (e.g. standardise YouTube links) so different URL formats
+    of the same video produce identical cache keys.
+    """
+    clean = (url or "").strip()
+    if not clean:
+        return ""
+    yt_match = re.search(r"(?:v=|\/shorts\/|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})", clean)
+    if yt_match:
+        return f"https://www.youtube.com/watch?v={yt_match.group(1)}"
+    return clean
+
+
 def download_video(
     url: str, progress_hook: Optional[Callable[[dict], None]] = None
 ) -> Path:
@@ -119,7 +132,7 @@ def download_video(
     if not url or not url.strip():
         raise InvalidVideoURLError("No video URL was provided.")
 
-    url_clean = url.strip()
+    url_clean = normalize_url(url)
     url_hash = hashlib.sha256(url_clean.encode("utf-8")).hexdigest()[:16]
     expected_path = DOWNLOADS_DIR / f"{url_hash}.mp4"
 
@@ -134,8 +147,11 @@ def download_video(
             })
         return expected_path
 
-    existing = sorted(DOWNLOADS_DIR.glob(f"{url_hash}.*"))
-    if existing and existing[0].stat().st_size > 1024:
+    existing = [
+        p for p in sorted(DOWNLOADS_DIR.glob(f"{url_hash}.*"))
+        if not p.name.endswith((".part", ".ytdl", ".temp", ".tmp")) and p.stat().st_size > 1024
+    ]
+    if existing:
         logger.info("Reusing cached video download for %s: %s", url_clean, existing[0])
         if progress_hook:
             progress_hook({

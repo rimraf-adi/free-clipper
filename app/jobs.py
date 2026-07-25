@@ -19,11 +19,13 @@ import time
 import uuid
 from typing import Dict, List, Optional
 
-from . import captions, downloader, history, music, pretranscribe, reframe, selector, transcriber, uploads
+from . import captions, downloader, history, music, pretranscribe, reframe, selector, smart_crop, transcriber, uploads
 from .clipper import ClipOptions, generate_clip, target_size
 from .models import (
     LANGUAGE_NAMES,
+    AspectRatio,
     ClipGenerationError,
+    FitMode,
     GenerateRequest,
     InvalidVideoURLError,
     TranscriptionError,
@@ -358,9 +360,33 @@ def _run_pipeline(job: Job) -> None:
                 fit_mode=req.fit_mode.value,
             )
 
+            # Auto AI Reframing: Detect faces & active speakers to generate smart pan keyframes
+            clip_fit_mode = req.fit_mode
+            clip_reframe_kfs: Optional[list[dict]] = None
+
+            if req.fit_mode == FitMode.AUTO:
+                try:
+                    job.set_stage(
+                        "rendering",
+                        index / total,
+                        f"AI Face Tracking & Reframing clip {index + 1} of {total}...",
+                    )
+                    smart_kfs, smart_mode = smart_crop.generate_smart_keyframes(
+                        str(source_mp4), start, end
+                    )
+                    if smart_mode == "split":
+                        clip_fit_mode = FitMode.SPLIT
+                    else:
+                        clip_fit_mode = FitMode.CROP
+                        clip_reframe_kfs = smart_kfs
+                except Exception as exc:
+                    logger.warning("Smart crop failed for clip %d (%s); falling back to center crop.", index, exc)
+                    clip_fit_mode = FitMode.CROP
+
             opts = ClipOptions(
                 aspect_ratio=req.aspect_ratio,
-                fit_mode=req.fit_mode,
+                fit_mode=clip_fit_mode,
+                reframe=clip_reframe_kfs,
                 square_corners=req.square_corners.value,
                 ass_path=ass_path,
                 clip_id=clip_id,
@@ -394,6 +420,7 @@ def _run_pipeline(job: Job) -> None:
                     "music_duck": opts.music_duck,
                     "music_start": opts.music_start,
                     "signature": opts.signature,
+                    "reframe": opts.reframe,
                 },
             )
 

@@ -16,6 +16,9 @@ import os
 import subprocess
 import sys
 import threading
+
+# Suppress harmless macOS Objective-C duplicate class warnings when PyAV and OpenCV are both loaded
+os.environ.setdefault("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path

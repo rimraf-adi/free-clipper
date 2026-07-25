@@ -15,15 +15,19 @@ import cv2
 
 logger = logging.getLogger(__name__)
 
-# Load Haar cascade once
 _face_cascade = None
+_profile_cascade = None
 
-def _get_cascade():
-    global _face_cascade
+def _get_cascades():
+    global _face_cascade, _profile_cascade
     if _face_cascade is None:
-        path = getattr(getattr(cv2, "data", None), "haarcascades", "") + "haarcascade_frontalface_default.xml"
-        _face_cascade = getattr(cv2, "CascadeClassifier", lambda p: None)(path)
-    return _face_cascade
+        cv_data = getattr(getattr(cv2, "data", None), "haarcascades", "")
+        f_path = cv_data + "haarcascade_frontalface_default.xml"
+        p_path = cv_data + "haarcascade_profileface.xml"
+        cls = getattr(cv2, "CascadeClassifier", None)
+        _face_cascade = cls(f_path) if cls else None
+        _profile_cascade = cls(p_path) if cls else None
+    return _face_cascade, _profile_cascade
 
 
 def detect_faces_in_clip(
@@ -45,7 +49,7 @@ def detect_faces_in_clip(
         width = cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 1920.0
         height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 1080.0
 
-        cascade = _get_cascade()
+        f_cascade, p_cascade = _get_cascades()
         detections = []
 
         curr_t = start_sec
@@ -59,13 +63,20 @@ def detect_faces_in_clip(
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = []
-            if cascade is not None and hasattr(cascade, "detectMultiScale"):
-                faces = cascade.detectMultiScale(
+            if f_cascade is not None and hasattr(f_cascade, "detectMultiScale"):
+                faces = list(f_cascade.detectMultiScale(
                     gray,
                     scaleFactor=1.1,
-                    minNeighbors=5,
-                    minSize=(60, 60)
-                )
+                    minNeighbors=4,
+                    minSize=(40, 40)
+                ))
+            if not len(faces) and p_cascade is not None and hasattr(p_cascade, "detectMultiScale"):
+                faces = list(p_cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=1.1,
+                    minNeighbors=4,
+                    minSize=(40, 40)
+                ))
 
             frame_faces = []
             for (x, y, w, h) in faces:
@@ -157,27 +168,28 @@ def generate_smart_keyframes(
     keyframes = []
     if len(clusters) == 1 or recommended_mode == "single":
         # Single Subject Tracking: Smooth Exponential Moving Average (EMA)
-        target_x = max(15.0, min(85.0, clusters[0]))
+        target_x = max(0.0, min(100.0, clusters[0]))
         logger.info("Smart Crop: Single subject detected at X=%.1f%% -> auto-reframing.", target_x)
 
         smoothed_x = target_x
-        alpha = 0.3  # Smoothing factor
+        alpha = 0.35  # Smoothing factor for natural camera pan
 
         for d in detections:
             t = d["time"]
             faces = d.get("faces", [])
             if faces:
-                raw_x = faces[0]["x_pct"]
-                smoothed_x = alpha * raw_x + (1.0 - alpha) * smoothed_x
+                # Track the face closest to our current smoothed position (handles multi-face noise)
+                nearest = min(faces, key=lambda f: abs(f["x_pct"] - smoothed_x))
+                smoothed_x = alpha * nearest["x_pct"] + (1.0 - alpha) * smoothed_x
             
             keyframes.append({
                 "time": t,
-                "pos_x": max(15.0, min(85.0, round(smoothed_x, 2))),
-                "pos_y": 50.0,
+                "pos_x": max(0.0, min(100.0, round(smoothed_x, 2))),
+                "pos_y": 45.0,  # Upper-middle framing so captions below don't obscure the face
                 "zoom": 100
             })
     else:
-        # Dual Speaker Active Pan: Switch between left and right cluster
+        # Dual Speaker Active Pan: Switch smoothly between left and right speaker clusters
         c_left, c_right = clusters[0], clusters[1]
         logger.info("Smart Crop: Dual speakers detected (Left=%.1f%%, Right=%.1f%%) -> active speaker panning.", c_left, c_right)
 
@@ -195,12 +207,12 @@ def generate_smart_keyframes(
 
             keyframes.append({
                 "time": t,
-                "pos_x": max(15.0, min(85.0, round(curr_x, 2))),
-                "pos_y": 50.0,
+                "pos_x": max(0.0, min(100.0, round(curr_x, 2))),
+                "pos_y": 45.0,
                 "zoom": 100
             })
 
     if not keyframes:
-        keyframes = [{"time": 0.0, "pos_x": 50.0, "pos_y": 50.0, "zoom": 100}]
+        keyframes = [{"time": 0.0, "pos_x": 50.0, "pos_y": 45.0, "zoom": 100}]
 
     return (keyframes, "crop")

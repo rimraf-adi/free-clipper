@@ -144,10 +144,9 @@ def _escape_drawtext(text: str) -> str:
 
 def _ass_filter(opts: ClipOptions, work_dir: Path) -> str:
     """The caption-burn filter. Relative paths keep the drive colon/spaces out."""
-    return (
-        f"ass={_rel_for_filter(opts.ass_path, work_dir)}:"
-        f"fontsdir={_rel_for_filter(FONTS_DIR, work_dir)}"
-    )
+    ass_path = _rel_for_filter(opts.ass_path, work_dir)
+    fonts_dir = _rel_for_filter(FONTS_DIR, work_dir)
+    return f"ass=filename='{ass_path}':fontsdir='{fonts_dir}'"
 
 
 def _caption_stage(in_label: str, opts: ClipOptions, work_dir: Path) -> str:
@@ -281,25 +280,16 @@ def _crop_filter(width: int, height: int, reframe: Optional[list[dict]]) -> str:
     yf = yf or "0.5"
 
     if zoom is not None:
-        # Scale the already-covering canvas up further by the zoom factor, then
-        # crop the same fixed W:H back out of it — a tighter, more zoomed-in
-        # view. The pan offset is computed from the KNOWN base width/height and
-        # this SAME zoom expression (not ffmpeg's in_w/in_h): crop does not
-        # reliably refresh in_w/in_h per frame when its upstream frame size is
-        # itself changing per frame — verified with a real render, where using
-        # in_w/in_h here produced an off-centre, runaway-looking zoom instead of
-        # a centred one.
         prefix = f"scale=w='iw*{zoom}':h='ih*{zoom}':eval=frame,"
-        x_part = f"({width}*{zoom}-{width})*({xf})"
-        y_part = f"({height}*{zoom}-{height})*({yf})"
+        x_part = f"clip(in_w*{zoom}*({xf})-out_w/2,0,in_w*{zoom}-out_w)"
+        y_part = f"clip(in_h*{zoom}*({yf})-out_h/2,0,in_h*{zoom}-out_h)"
     else:
         prefix = ""
-        x_part = f"(in_w-out_w)*({xf})"
-        y_part = f"(in_h-out_h)*({yf})"
+        x_part = f"clip(in_w*({xf})-out_w/2,0,in_w-out_w)"
+        y_part = f"clip(in_h*({yf})-out_h/2,0,in_h-out_h)"
 
     # crop's x/y expressions are re-evaluated every frame automatically when
-    # they reference time-varying variables like `t` — unlike drawbox/overlay,
-    # this filter has no separate `eval` option (passing one is a hard error).
+    # they reference time-varying variables like `t`.
     return f"{prefix}crop={width}:{height}:x='{x_part}':y='{y_part}'"
 
 
@@ -510,10 +500,18 @@ def generate_clip(source_mp4: Path, start: float, end: float, opts: ClipOptions)
         raise ClipGenerationError(f"Failed to run ffmpeg: {exc}") from exc
 
     if proc.returncode != 0 or not out_path.exists():
-        # Surface the tail of ffmpeg's stderr — it usually pinpoints the problem.
         tail = (proc.stderr or "").strip().splitlines()[-12:]
+        err_msg = "\n".join(tail)
+        if "No such filter" in err_msg and "ass" in err_msg:
+            raise ClipGenerationError(
+                "Your system's FFmpeg is missing 'libass' support (the 'ass' subtitle filter).\n\n"
+                "To fix this on macOS, run this in your terminal to install full FFmpeg:\n"
+                "  brew tap homebrew-ffmpeg/ffmpeg\n"
+                "  brew install homebrew-ffmpeg/ffmpeg/ffmpeg-full\n\n"
+                f"Details:\n{err_msg}"
+            )
         raise ClipGenerationError(
-            "ffmpeg failed to render the clip:\n" + "\n".join(tail)
+            "ffmpeg failed to render the clip:\n" + err_msg
         )
 
     return out_path

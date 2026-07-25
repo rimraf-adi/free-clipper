@@ -140,9 +140,23 @@ def _key(source_id: str, language: Optional[str]) -> str:
 
 
 def cached(source_id: str, language: Optional[str] = None) -> Optional[dict]:
-    """Return an in-memory cached transcript for this source+language, if any."""
+    """Return a cached transcript for this source+language (memory or disk), if any."""
+    key = _key(source_id, language)
     with _CACHE_LOCK:
-        return _CACHE.get(_key(source_id, language))
+        hit = _CACHE.get(key)
+        if hit is not None:
+            return hit
+    tpath = TRANSCRIPTS_DIR / f"{key}.json"
+    if tpath.exists():
+        try:
+            result = json.loads(tpath.read_text(encoding="utf-8"))
+            with _CACHE_LOCK:
+                _CACHE[key] = result
+            logger.info("Reusing transcript on disk for %s", key)
+            return result
+        except Exception:  # noqa: BLE001 - corrupt/partial json -> re-transcribe
+            pass
+    return None
 
 
 def get_or_transcribe(
